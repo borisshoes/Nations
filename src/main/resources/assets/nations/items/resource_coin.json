@@ -1,0 +1,84 @@
+{
+	"model": {
+		"type": "minecraft:range_dispatch",
+		"property": "minecraft:count",
+		"normalize": false,
+		"entries": [
+			{
+				"threshold": 0,
+				"model": {
+					"type": "minecraft:model",
+					"model": "nations:item/coin_1",
+					"tints": [
+						{
+							"type": "minecraft:dye",
+							"default": 16777215
+						}
+					]
+				}
+			},
+			{
+				"threshold": 11,
+				"model": {
+					"type": "minecraft:model",
+					"model": "nations:item/coin_2",
+					"tints": [
+						{
+							"type": "minecraft:dye",
+							"default": 16777215
+						}
+					]
+				}
+			},
+			{
+				"threshold": 26,
+				"model": {
+					"type": "minecraft:model",
+					"model": "nations:item/coin_3",
+					"tints": [
+						{
+							"type": "minecraft:dye",
+							"default": 16777215
+						}
+					]
+				}
+			},
+			{
+				"threshold": 49,
+				"model": {
+					"type": "minecraft:model",
+					"model": "nations:item/coin_4",
+					"tints": [
+						{
+							"type": "minecraft:dye",
+							"default": 16777215
+						}
+					]
+				}
+			},
+			{
+				"threshold": 73,
+				"model": {
+					"type": "minecraft:model",
+					"model": "nations:item/coin_5",
+					"tints": [
+						{
+							"type": "minecraft:dye",
+							"default": 16777215
+						}
+					]
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:model",
+			"model": "nations:item/coin_1",
+			"tints": [
+				{
+					"type": "minecraft:dye",
+					"default": 16777215
+				}
+			]
+		}
+	}
+}

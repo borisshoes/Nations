@@ -1,0 +1,6 @@
+{
+    "model": {
+        "type": "minecraft:model",
+        "model": "nations:item/gui/capture_point_growth"
+    }
+}

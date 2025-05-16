@@ -1,0 +1,24 @@
+{
+  "chat": {
+    "parameters": [
+      "target",
+      "sender",
+      "content"
+    ],
+	"style": {
+			"clickEvent": {
+				"action": "run_command",
+				"value": "/nation channel global"
+			}
+		},
+    "translation_key": "chat.type.global_message"
+  },
+  "narration": {
+    "parameters": [
+	  "target",
+      "sender",
+      "content"
+    ],
+    "translation_key": "chat.type.global_message"
+  }
+}

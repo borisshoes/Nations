@@ -1,0 +1,12 @@
+{
+    "model": {
+        "type": "minecraft:model",
+        "model": "nations:item/gui/menu_bottom",
+        "tints": [
+            {
+                "type": "minecraft:dye",
+                "default": -1
+            }
+        ]
+    }
+}

@@ -1,0 +1,4 @@
+accessWidener	v2	named
+
+accessible field net/minecraft/screen/ForgingScreenHandler player Lnet/minecraft/entity/player/PlayerEntity;
+accessible field net/minecraft/block/entity/BrewingStandBlockEntity inventory Lnet/minecraft/util/collection/DefaultedList;

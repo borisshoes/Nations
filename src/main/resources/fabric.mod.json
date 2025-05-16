@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "nations",
+  "version": "${version}",
+  "name": "Nations",
+  "description": "A role-play competitive civilization mod",
+  "authors": [],
+  "contact": {},
+  "license": "OSL-3.0",
+  "icon": "assets/nations/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "fabric-datagen": [
+      "net.borisshoes.nations.datagen.DataGenerator"
+    ],
+    "main": [
+      "net.borisshoes.nations.Nations"
+    ],
+    "cardinal-components-entity": [
+      "net.borisshoes.nations.cca.PlayerComponentInitializer"
+    ],
+    "cardinal-components-world": [
+      "net.borisshoes.nations.cca.WorldDataComponentInitializer"
+    ]
+  },
+  "custom": {
+    "cardinal-components": ["nations:profile","nations:nation_data"]
+  },
+  "mixins": [
+    "nations.mixins.json"
+  ],
+  "accessWidener" : "nations.accesswidener",
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
