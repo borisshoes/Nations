@@ -538,6 +538,7 @@ public class ConfigUtils {
    
    private static String getTranslation(String name, String suffix){
       if(suffix.equals("error")) return "command."+MOD_ID+".error";
+      if(suffix.equals("setter") || suffix.equals("getter")) suffix = "getter_setter";
       return "command."+MOD_ID+"."+name.replaceAll("([a-z])([A-Z]+)", "$1_$2").toLowerCase(Locale.ROOT)+"."+suffix;
    }
    

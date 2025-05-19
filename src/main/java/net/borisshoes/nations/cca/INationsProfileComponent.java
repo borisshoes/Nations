@@ -14,6 +14,9 @@ public interface INationsProfileComponent extends ComponentV3 {
    BlockPos getRiftReturnPos();
    long getLastOnline();
    long lastLoginBonus();
+   String lastTerritory();
+   int titleCooldown();
+   void resetTitleCooldown();
    
    void setNation(Nation nation);
    void setClaimBypass(boolean bypass);
@@ -24,4 +27,6 @@ public interface INationsProfileComponent extends ComponentV3 {
    void removePlayerTeam(MinecraftServer server);
    void setLastOnline(long time);
    void setLastLoginBonus(long time);
+   void setLastTerritory(String lastTerritory);
+   void tick();
 }

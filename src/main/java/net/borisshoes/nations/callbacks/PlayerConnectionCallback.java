@@ -1,11 +1,16 @@
 package net.borisshoes.nations.callbacks;
 
+import net.borisshoes.arcananovum.ArcanaNovum;
+import net.borisshoes.arcananovum.ArcanaRegistry;
+import net.borisshoes.arcananovum.cardinalcomponents.IArcanaProfileComponent;
+import net.borisshoes.arcananovum.core.ArcanaItem;
 import net.borisshoes.arcananovum.damage.ArcanaDamageTypes;
 import net.borisshoes.arcananovum.utils.SpawnPile;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.cca.INationsProfileComponent;
+import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.gameplay.WarManager;
 import net.borisshoes.nations.utils.GenericTimer;
 import net.borisshoes.nations.utils.ParticleEffectUtils;
@@ -26,16 +31,28 @@ public class PlayerConnectionCallback {
    public static void onPlayerJoin(ServerPlayNetworkHandler netHandler, PacketSender sender, MinecraftServer server) {
       ServerPlayerEntity player = netHandler.getPlayer();
       INationsProfileComponent profile = Nations.getPlayer(player);
+      Nation playerNation = profile.getNation();
       profile.addPlayerTeam(server);
       long lastOnline = profile.getLastOnline();
       long lastLoginBonus = profile.lastLoginBonus();
       long now = System.currentTimeMillis();
-      if((now - lastLoginBonus) > 86400000 && profile.getNation() != null){
-         profile.getNation().addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_LOGIN_CFG));
+      if((now - lastLoginBonus) > 86400000 && playerNation != null){
+         playerNation.addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_LOGIN_CFG));
          Nations.addTickTimerCallback( new GenericTimer(100, () -> player.sendMessage(Text.translatable("text.nations.login_bonus").formatted(Formatting.GOLD))));
          profile.setLastLoginBonus(now);
       }
       profile.setLastOnline(now);
+      
+      IArcanaProfileComponent arcanaProfile = ArcanaNovum.data(player);
+      if(playerNation != null){
+         for(ArcanaItem arcanaItem : ArcanaRegistry.ARCANA_ITEMS){
+            if(playerNation.canCraft(arcanaItem) || arcanaItem.getId().equals(ArcanaRegistry.ARCANE_TOME.getId())){
+               arcanaProfile.addResearchedItem(arcanaItem.getId());
+            }else{
+               arcanaProfile.removeResearchedItem(arcanaItem.getId());
+            }
+         }
+      }
       
       if(profile.getRiftReturnPos() != null && player.getWorld().getRegistryKey().equals(World.NETHER) && (Nations.LAST_RIFT == null || !Nations.LAST_RIFT.isActive())){
          Nations.addTickTimerCallback( new GenericTimer(10, () -> {

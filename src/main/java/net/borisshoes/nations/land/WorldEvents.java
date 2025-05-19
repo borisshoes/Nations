@@ -15,8 +15,6 @@ import java.util.function.Consumer;
 
 public class WorldEvents {
    
-   // TODO tick boat perms in claimed chunks & enter/exit msgs
-   
    public static void modifyExplosion(List<BlockPos> list, ServerWorld world) {
       list.removeIf(pos -> !NationsLand.canExplodeBlocks(world, pos));
    }

@@ -89,8 +89,6 @@ public class ServerPlayerEntityMixin {
          }
       }
       
-      System.out.println("Player died: "+player);
-      
       for(Map.Entry<CapturePoint, ServerPlayerEntity> entry : WarManager.getPendingContests().entrySet()){
          if(entry.getValue().equals(player)){
             // TODO cancel
@@ -103,7 +101,6 @@ public class ServerPlayerEntityMixin {
          ServerPlayerEntity attacker = contest.attacker();
          ServerPlayerEntity defender = contest.defender();
          if(!player.equals(attacker) && !player.equals(defender)) continue;
-         System.out.println("Found Contest");
          Vec3d tpPos = contest.capturePoint().getBeaconPos().toCenterPos().add(0,2,0);
          player.teleportTo(new TeleportTarget(player.getServer().getOverworld(),tpPos,Vec3d.ZERO,player.getYaw(),player.getPitch(),TeleportTarget.NO_OP));
          completedContest = contest;
@@ -111,7 +108,6 @@ public class ServerPlayerEntityMixin {
       }
       
       if(completedContest != null){
-         System.out.println("Concluding Contest");
          WarManager.concludeContest(player.getServer(),completedContest,winner);
       }
    }

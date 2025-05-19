@@ -13,6 +13,8 @@ import net.minecraft.util.math.ChunkSectionPos;
 import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.mojang.brigadier.arguments.LongArgumentType.getLong;
+import static com.mojang.brigadier.arguments.LongArgumentType.longArg;
 import static com.mojang.brigadier.arguments.StringArgumentType.*;
 import static net.minecraft.command.argument.EntityArgumentType.getPlayer;
 import static net.minecraft.command.argument.EntityArgumentType.player;
@@ -22,8 +24,8 @@ import static net.minecraft.server.command.CommandManager.literal;
 public class CommandRegisterCallback {
    
    public static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess, CommandManager.RegistrationEnvironment registrationEnvironment){
-      dispatcher.register(literal("nations")
-            .then(literal("survey")
+      dispatcher.register(literal("nations").requires(source -> source.hasPermissionLevel(2))
+            .then(literal("survey").requires(source -> source.hasPermissionLevel(2))
                   .then(argument("radius", integer(0,32)).executes(context -> NationsCommands.adminSurvey(context, getInteger(context,"radius")))))
             .then(literal("initializeWorld").requires(source -> source.hasPermissionLevel(2)).executes(NationsCommands::initializeWorld))
             .then(literal("test").requires(source -> source.hasPermissionLevel(2)).executes(NationsCommands::test))
@@ -38,24 +40,31 @@ public class CommandRegisterCallback {
                   .then(literal("grant")
                         .then(argument("nation_id", word()).suggests(NationsCommands::getNationSuggestions)
                               .then(argument("research_id", word()).suggests(NationsCommands::getResearchSuggestions)
-                                    .executes(context -> NationsCommands.adminResearch(context, getString(context, "nation_id"), getString(context, "research_id"), true)))))
+                                    .executes(context -> NationsCommands.adminResearch(context, getString(context, "nation_id"), getString(context, "research_id"), true, false)))))
                   .then(literal("revoke")
                         .then(argument("nation_id", word()).suggests(NationsCommands::getNationSuggestions)
                               .then(argument("research_id", word()).suggests(NationsCommands::getResearchSuggestions)
-                                    .executes(context -> NationsCommands.adminResearch(context, getString(context, "nation_id"), getString(context, "research_id"), false))))))
+                                    .executes(context -> NationsCommands.adminResearch(context, getString(context, "nation_id"), getString(context, "research_id"), false, false))
+                                    .then(literal("removePostReqs")
+                                          .executes(context -> NationsCommands.adminResearch(context, getString(context, "nation_id"), getString(context, "research_id"), false, true)))))))
             .then(literal("giveVP").requires(source -> source.hasPermissionLevel(2))
                   .then(argument("nation_id", word()).suggests(NationsCommands::getNationSuggestions)
                         .then(argument("count", integer()).executes(context -> NationsCommands.giveVictoryPoints(context, getString(context, "nation_id"), getInteger(context, "count"))))))
+            .then(literal("changeColors").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("nation_id", word()).suggests(NationsCommands::getNationSuggestions)
+                        .then(argument("text_color_main", string())
+                              .then(argument("text_color_sub", string())
+                                    .then(argument("dye_color", string()).suggests((context, builder) -> NationsCommands.getEnumSuggestions(context,builder, DyeColor.class))
+                                          .executes(context -> NationsCommands.updateColors(context, getString(context,"nation_id"), getString(context, "text_color_main"), getString(context, "text_color_sub"), getString(context, "dye_color"))))))))
+            .then(literal("changeName").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("nation_id", word()).suggests(NationsCommands::getNationSuggestions)
+                        .then(argument("nation_name", string())
+                              .executes(context -> NationsCommands.changeName(context, getString(context,"nation_id"), getString(context, "nation_name"))))))
             .then(literal("nick").requires(source -> source.hasPermissionLevel(2))
                   .then(argument("player", player())
                         .executes(context -> NationsCommands.nickPlayer(context, getPlayer(context,"player"), ""))
                         .then(argument("nickname", word())
                               .executes(context -> NationsCommands.nickPlayer(context, getPlayer(context,"player"), getString(context, "nickname"))))))
-      );
-      
-      dispatcher.register(literal("nation")
-            .then(literal("survey").executes(NationsCommands::nationSurvey))
-            .then(literal("settle").executes(NationsCommands::nationSettle))
             .then(literal("delete").requires(source -> source.hasPermissionLevel(2))
                   .then(argument("nation_id", word()).suggests(NationsCommands::getNationSuggestions)
                         .executes(context -> NationsCommands.deleteNation(context, getString(context, "nation_id")))))
@@ -75,17 +84,30 @@ public class CommandRegisterCallback {
                   .executes(context -> NationsCommands.leaveNation(context, context.getSource().getPlayer()))
                   .then(argument("player", player())
                         .executes(context -> NationsCommands.leaveNation(context, getPlayer(context, "player")))))
+            .then(literal("addShopItem").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("price",integer())
+                        .executes(context -> NationsCommands.addShopItem(context, getInteger(context, "price")))))
+            .then(literal("announce").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("message", greedyString())
+                        .executes(context -> NationsCommands.announce(context, getString(context,"message")))))
+            .then(literal("sendMail").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("nation_id", word()).suggests(NationsCommands::getNationSuggestions)
+                        .executes(context -> NationsCommands.sendMail(context, getString(context, "nation_id")))))
+            .then(literal("setNextWar").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("time", longArg())
+                        .executes(context -> NationsCommands.setNextWar(context, getLong(context, "time")))))
+            .then(literal("getNextWar").requires(source -> source.hasPermissionLevel(2)).executes(NationsCommands::getNextWar))
+      );
+      
+      dispatcher.register(literal("nation")
+            .then(literal("survey").executes(NationsCommands::nationSurvey))
+            .then(literal("settle").executes(NationsCommands::nationSettle))
             .then(literal("promote")
                   .then(argument("player", player())
                         .executes(context -> NationsCommands.changePerms(context, getPlayer(context, "player"), true))))
             .then(literal("demote")
                   .then(argument("player", player())
                         .executes(context -> NationsCommands.changePerms(context, getPlayer(context, "player"), false))))
-            .then(literal("research")
-                  .then(literal("start")
-                        .then(argument("research_id", word()).suggests(NationsCommands::getResearchSuggestions)
-                              .executes(context -> NationsCommands.startResearch(context, getString(context,"research_id")))))
-                  .then(literal("cancel").executes(NationsCommands::cancelResearch)))
             .then(literal("chunk")
                   .executes(context -> NationsCommands.openChunkMenu(context, ChunkSectionPos.from(context.getSource().getPosition())))
                   .then(argument("x", integer())
@@ -95,10 +117,11 @@ public class CommandRegisterCallback {
                   .then(literal("nation").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.NATION)))
                   .then(literal("local").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.LOCAL)))
                   .then(literal("global").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.GLOBAL))))
+            .then(literal("researchStatus")
+                  .executes(NationsCommands::researchStatus))
+            .then(literal("leaderboard")
+                  .executes(NationsCommands::leaderboard))
       );
-      
-      
-      
       
       dispatcher.register(Nations.CONFIG.generateCommand());
    }

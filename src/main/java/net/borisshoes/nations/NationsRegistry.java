@@ -7,7 +7,9 @@ import net.borisshoes.ancestralarchetypes.ArchetypeRegistry;
 import net.borisshoes.arcananovum.ArcanaRegistry;
 import net.borisshoes.arcananovum.core.ArcanaItem;
 import net.borisshoes.nations.blocks.ContestBoundaryBlock;
+import net.borisshoes.nations.gameplay.ResourceType;
 import net.borisshoes.nations.items.GraphicalItem;
+import net.borisshoes.nations.items.ResourceBullionItem;
 import net.borisshoes.nations.items.ResourceCoinItem;
 import net.borisshoes.nations.research.ResearchTech;
 import net.borisshoes.nations.utils.ConfigUtils;
@@ -78,9 +80,12 @@ public class NationsRegistry {
    public static final RegistryKey<MessageType> NATION_MESSAGE = RegistryKey.of(RegistryKeys.MESSAGE_TYPE, Identifier.of(MOD_ID,"nation_message"));
    
    public static final Item GRAPHICAL_ITEM = registerItem("graphical_item", new GraphicalItem(new Item.Settings().maxCount(64)));
-   public static final Item GROWTH_COIN_ITEM = registerItem("growth_coin", new ResourceCoinItem(new Item.Settings(), "growth_coin", NationsColors.GROWTH_COIN_COLOR));
-   public static final Item MATERIAL_COIN_ITEM = registerItem("material_coin", new ResourceCoinItem(new Item.Settings(), "material_coin", NationsColors.MATERIAL_COIN_COLOR));
-   public static final Item RESEARCH_COIN_ITEM = registerItem("research_coin", new ResourceCoinItem(new Item.Settings(), "research_coin", NationsColors.RESEARCH_COIN_COLOR));
+   public static final Item GROWTH_COIN_ITEM = registerItem("growth_coin", new ResourceCoinItem(new Item.Settings(), "growth_coin", NationsColors.GROWTH_COIN_COLOR, ResourceType.GROWTH));
+   public static final Item MATERIAL_COIN_ITEM = registerItem("material_coin", new ResourceCoinItem(new Item.Settings(), "material_coin", NationsColors.MATERIAL_COIN_COLOR, ResourceType.MATERIAL));
+   public static final Item RESEARCH_COIN_ITEM = registerItem("research_coin", new ResourceCoinItem(new Item.Settings(), "research_coin", NationsColors.RESEARCH_COIN_COLOR, ResourceType.RESEARCH));
+   public static final Item GROWTH_BULLION_ITEM = registerItem("growth_bullion", new ResourceBullionItem(new Item.Settings(), "growth_bullion", NationsColors.GROWTH_COIN_COLOR, ResourceType.GROWTH));
+   public static final Item MATERIAL_BULLION_ITEM = registerItem("material_bullion", new ResourceBullionItem(new Item.Settings(), "material_bullion", NationsColors.MATERIAL_COIN_COLOR, ResourceType.MATERIAL));
+   public static final Item RESEARCH_BULLION_ITEM = registerItem("research_bullion", new ResourceBullionItem(new Item.Settings(), "research_bullion", NationsColors.RESEARCH_COIN_COLOR, ResourceType.RESEARCH));
    
    public static final Block CONTEST_BOUNDARY_BLOCK = registerBlock("contest_boundary_block", new ContestBoundaryBlock(
          AbstractBlock.Settings.create().strength(-1.0F, 3600000.0F).dropsNothing().allowsSpawning(Blocks::never).pistonBehavior(PistonBehavior.BLOCK).registryKey(RegistryKey.of(RegistryKeys.BLOCK,Identifier.of(MOD_ID,"contest_boundary_block")))
@@ -138,9 +143,6 @@ public class NationsRegistry {
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_TIER_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("researchTier", 0, new ConfigUtils.IntegerConfigValue.IntLimits(0,100))));
-   
-   public static final NationsConfig.ConfigSetting<?> GLOBAL_ANNOUNCEMENTS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.BooleanConfigValue("globalAnnouncements", true)));
    
    public static final NationsConfig.ConfigSetting<?> CAPTURE_POINT_MIN_DIST_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("capturePointMinDist", 10, new ConfigUtils.IntegerConfigValue.IntLimits(5,100))));
@@ -214,6 +216,17 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> VICTORY_POINTS_LOGIN_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("victoryPointsDailyLogin", 15, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
+   public static final NationsConfig.ConfigSetting<?> WAR_ENABLED_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.BooleanConfigValue("warEnabled", false)));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_DURATION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warDuration", 120, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_CLOSEOFF_PERIOD_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warCloseoffPeriod", 20, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
+   
+   public static final NationsConfig.ConfigSetting<?> STACK_OVERDAMAGE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("stackOverdamageAmount", 5, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
    // Biome Coin Configs
    
@@ -620,7 +633,7 @@ public class NationsRegistry {
             .addCraftLock(Items.NETHERITE_INGOT, Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE));
       registerTech(CRYSTAL_COMPOSITE, new ResearchTech(CRYSTAL_COMPOSITE,2,new RegistryKey[]{BRONZEWORKING},RESEARCH_COST_CRYSTAL_COMPOSITE_CFG,RESEARCH_RATE_CRYSTAL_COMPOSITE_CFG).withShowStack(Items.DIAMOND_SWORD)
             .addCraftLock(Items.DIAMOND_SWORD, Items.DIAMOND_AXE));
-      registerTech(HARDENED_PLATES, new ResearchTech(HARDENED_PLATES,1,new RegistryKey[]{STEELWORKING},RESEARCH_COST_HARDENED_PLATES_CFG,RESEARCH_RATE_HARDENED_PLATES_CFG).withShowStack(Items.DIAMOND_CHESTPLATE)
+      registerTech(HARDENED_PLATES, new ResearchTech(HARDENED_PLATES,2,new RegistryKey[]{STEELWORKING},RESEARCH_COST_HARDENED_PLATES_CFG,RESEARCH_RATE_HARDENED_PLATES_CFG).withShowStack(Items.DIAMOND_CHESTPLATE)
             .addCraftLock(Items.DIAMOND_HELMET, Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS, Items.DIAMOND_BOOTS));
       registerTech(FIBERGLASS_COMPOSITE, new ResearchTech(FIBERGLASS_COMPOSITE,2,new RegistryKey[]{ARCHERY},RESEARCH_COST_FIBERGLASS_COMPOSITE_CFG,RESEARCH_RATE_FIBERGLASS_COMPOSITE_CFG).withShowStack(Items.CROSSBOW)
             .addCraftLock(Items.CROSSBOW));
@@ -849,6 +862,9 @@ public class NationsRegistry {
          entries.add(new ItemStack(GROWTH_COIN_ITEM));
          entries.add(new ItemStack(MATERIAL_COIN_ITEM));
          entries.add(new ItemStack(RESEARCH_COIN_ITEM));
+         entries.add(new ItemStack(GROWTH_BULLION_ITEM));
+         entries.add(new ItemStack(MATERIAL_BULLION_ITEM));
+         entries.add(new ItemStack(RESEARCH_BULLION_ITEM));
       }).build();
       
       PolymerItemGroupUtils.registerPolymerItemGroup(Identifier.of(MOD_ID,"nations_items"), ITEM_GROUP);

@@ -363,12 +363,12 @@ public class NationsLand {
       if(!entity.getWorld().getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
       if(PLAYER_DATA.get(player).bypassesClaims()) return true;
       BlockPos pos = entity.getBlockPos();
+      if(entity instanceof Monster && !entity.hasCustomName()) return true;
       if(isSpawnChunk(pos)){
          if(message) sendPermissionMessage(player,pos);
          return false;
       }
       if(Nations.isWartime()) return true;
-      if(entity instanceof Monster && !entity.hasCustomName()) return true;
       
       if(entity instanceof ServerPlayerEntity otherPlayer){
          if(Nations.isInfluencedAgainst(new ChunkPos(pos),player)){
@@ -468,6 +468,29 @@ public class NationsLand {
    
    public static void sendPermissionMessage(ServerPlayerEntity player, BlockPos pos){
       player.sendMessage(Text.translatable("text.nations.claim_warning").formatted(Formatting.RED,Formatting.ITALIC),true);
+   }
+   
+   public static boolean isBeaconPos(World world, BlockPos pos){
+      if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return false;
+      ChunkPos chunk = new ChunkPos(pos);
+      NationChunk nChunk = Nations.getChunk(chunk);
+      if(nChunk == null) return false;
+      Nation nation = nChunk.getControllingNation();
+      
+      CapturePoint cap = Nations.getCapturePoint(chunk);
+      if(cap != null){
+         BlockPos beaconPos = cap.getBeaconPos();
+         if(pos.getX() == beaconPos.getX() && pos.getY() >= beaconPos.getY() && pos.getZ() == beaconPos.getZ()){
+            return true;
+         }
+      }else if(nation != null){
+         BlockPos centerPos = nation.getFoundingPos();
+         if(!(new ChunkPos(centerPos).equals(chunk))) return false;
+         if((pos.getX() == centerPos.getX()+7 || pos.getX() == centerPos.getX()+8) && (pos.getZ() == centerPos.getZ()+7 || pos.getZ() == centerPos.getZ()+8) && pos.getY() > nation.getFoundHeight()){
+            return true;
+         }
+      }
+      return false;
    }
    
    public static boolean isCapturePointBlock(BlockPos pos){

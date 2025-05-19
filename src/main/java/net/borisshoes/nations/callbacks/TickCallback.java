@@ -6,8 +6,10 @@ import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.cca.INationsDataComponent;
 import net.borisshoes.nations.cca.INationsProfileComponent;
+import net.borisshoes.nations.gameplay.NationChunk;
 import net.borisshoes.nations.gameplay.TimedEvents;
 import net.borisshoes.nations.gameplay.WarManager;
+import net.borisshoes.nations.land.NationsLand;
 import net.borisshoes.nations.research.ResearchTech;
 import net.borisshoes.nations.utils.ParticleEffectUtils;
 import net.minecraft.component.DataComponentTypes;
@@ -20,15 +22,20 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.projectile.FishingBobberEntity;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket;
+import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 
@@ -55,9 +62,10 @@ public class TickCallback {
          
          
          for(ServerPlayerEntity player : server.getPlayerManager().getPlayerList()){
+            INationsProfileComponent profile = Nations.getPlayer(player);
+            profile.tick();
+            
             if(server.getTicks() % 20 == 0){
-               INationsProfileComponent profile = Nations.getPlayer(player);
-               
                Vec3d pos = player.getPos();
                float largestPos = (float) Math.max(Math.abs(pos.x), Math.abs(pos.z));
                int border = Integer.MAX_VALUE;
@@ -124,6 +132,36 @@ public class TickCallback {
                      
                      EnchantmentHelper.set(item,newEnchants.build());
                   }
+               }
+            }
+            
+            if(player.getServerWorld().getRegistryKey().equals(ServerWorld.OVERWORLD)){
+               BlockPos pos = player.getBlockPos();
+               NationChunk nationChunk = Nations.getChunk(new ChunkPos(pos));
+               String lastTerritory = profile.lastTerritory();
+               String territory = "";
+               if(NationsLand.isSpawnChunk(pos)){
+                  territory = ".spawn";
+               }else if(nationChunk != null && nationChunk.getControllingNation() != null){
+                  territory = nationChunk.getControllingNation().getId();
+               }
+               
+               if(!territory.equals(lastTerritory)){
+                  int titleCd = profile.titleCooldown();
+                  if(titleCd == 0){
+                     MutableText titleText = Text.translatable("text.nations.wilderness").formatted(Formatting.GRAY);
+                     if(territory.equals(".spawn")){
+                        titleText = Text.translatable("text.nations.spawn").formatted(Formatting.DARK_AQUA);
+                     }else if(!territory.isBlank()){
+                        titleText = nationChunk.getControllingNation().getFormattedNameTag(false);
+                     }
+                     if(titleText != null){
+                        player.networkHandler.sendPacket(new TitleFadeS2CPacket(10, 20, 10));
+                        player.networkHandler.sendPacket(new TitleS2CPacket(titleText));
+                        profile.resetTitleCooldown();
+                     }
+                  }
+                  profile.setLastTerritory(territory);
                }
             }
          }

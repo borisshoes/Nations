@@ -13,6 +13,7 @@ import net.borisshoes.nations.land.NationsLand;
 import net.borisshoes.nations.research.ResearchTech;
 import net.borisshoes.nations.utils.GenericTimer;
 import net.borisshoes.nations.utils.NationsUtils;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.network.packet.c2s.common.SyncedClientOptions;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
@@ -21,6 +22,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.ClickEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
@@ -34,6 +36,10 @@ import org.apache.commons.lang3.tuple.Triple;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -42,6 +48,8 @@ import static net.borisshoes.nations.cca.PlayerComponentInitializer.PLAYER_DATA;
 import static net.borisshoes.nations.cca.WorldDataComponentInitializer.NATIONS_DATA;
 
 public class NationsCommands {
+   
+   public static final HashMap<ServerPlayerEntity, ChunkPos> SETTLE_WARNING = new HashMap<>();
    
    public static CompletableFuture<Suggestions> getNationSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder){
       String start = builder.getRemaining().toLowerCase(Locale.ROOT);
@@ -76,21 +84,10 @@ public class NationsCommands {
    public static int test(CommandContext<ServerCommandSource> ctx){
       try{
          ServerCommandSource src = ctx.getSource();
-         ServerWorld world = src.getWorld();
-         INationsDataComponent nationsData = NATIONS_DATA.get(src.getServer().getOverworld());
-         
-         boolean teardown = true;
-//         CapturePoint cap = Nations.getCapturePoint(new ChunkPos(BlockPos.ofFloored(src.getPosition())));
-//         if(cap != null){
-//            System.out.println("Running Duel");
-//            WarManager.startContest(src.getServer(),cap,src.getPlayer(),src.getServer().getPlayerManager().getPlayer("BorisHoes"));
-//         }else{
-//            System.out.println("Null: "+new ChunkPos(BlockPos.ofFloored(src.getPosition())));
-//         }
          
          NbtElement nbt = src.getPlayer().getMainHandStack().toNbt(src.getServer().getRegistryManager());
          String sellNbt = nbt.asString();
-         System.out.println(sellNbt);
+         src.sendMessage(Text.literal(sellNbt).styled(s -> s.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD,sellNbt))));
          
          return 1;
       }catch(Exception e){
@@ -411,6 +408,11 @@ public class NationsCommands {
             src.sendError(Text.translatable("text.nations.cannot_settle_in_nation"));
             return -1;
          }
+         if(!nation.hasPermissions(player)){
+            src.sendError(Text.translatable("text.nations.player_not_executor"));
+            return -1;
+         }
+         
          int settleRadius = NationsConfig.getInt(NationsRegistry.SETTLE_RADIUS_CFG);
          
          for (int dx = -settleRadius; dx <= settleRadius; dx++) {
@@ -425,7 +427,15 @@ public class NationsCommands {
             }
          }
          
-         nation.settleNation(player.getServerWorld(),chunkPos);
+         if(SETTLE_WARNING.containsKey(player) && SETTLE_WARNING.get(player).equals(chunkPos)){
+            nation.settleNation(player.getServerWorld(),chunkPos);
+            SETTLE_WARNING.remove(player);
+         }else{
+            src.sendMessage(Text.translatable("text.nations.settle_warning").formatted(Formatting.GOLD));
+            SETTLE_WARNING.put(player,chunkPos);
+            nationSurvey(ctx);
+         }
+         
          return 1;
       }catch(Exception e){
          log(2,e.toString());
@@ -504,6 +514,73 @@ public class NationsCommands {
       }
    }
    
+   public static int updateColors(CommandContext<ServerCommandSource> ctx, String nationId, String textColorMain, String textColorSub, String dyeColor){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         Nation nation = Nations.getNation(nationId);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_nation_error"));
+            return -1;
+         }
+         
+         int parsedColorMain,parsedColorSub;
+         try{
+            if(textColorMain.startsWith("0x")){
+               textColorMain = textColorMain.substring(2);
+            }else if(textColorMain.startsWith("#")){
+               textColorMain = textColorMain.substring(1);
+            }
+            if(textColorSub.startsWith("0x")){
+               textColorSub = textColorSub.substring(2);
+            }else if(textColorSub.startsWith("#")){
+               textColorSub = textColorSub.substring(1);
+            }
+            
+            
+            if (textColorMain.matches("[0-9A-Fa-f]{6}")) {
+               parsedColorMain = Integer.parseInt(textColorMain, 16);
+            } else {
+               parsedColorMain = Integer.parseInt(textColorMain);
+            }
+            if (textColorSub.matches("[0-9A-Fa-f]{6}")) {
+               parsedColorSub = Integer.parseInt(textColorSub, 16);
+            } else {
+               parsedColorSub = Integer.parseInt(textColorSub);
+            }
+         }catch(Exception e){
+            src.sendError(Text.translatable("text.nations.color_error"));
+            return -1;
+         }
+         
+         nation.changeColors(parsedColorMain,parsedColorSub,DyeColor.byName(dyeColor,DyeColor.WHITE));
+         src.sendFeedback(() -> Text.translatable("text.nations.updated_colors",nationId), true);
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int changeName(CommandContext<ServerCommandSource> ctx, String nationId, String nationName){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         Nation nation = Nations.getNation(nationId);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_nation_error"));
+            return -1;
+         }
+         
+         nation.changeName(nationName);
+         src.sendFeedback(() -> Text.translatable("text.nations.updated_name",nationId), true);
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
    public static int createNation(CommandContext<ServerCommandSource> ctx, String nationId, String nationName, String textColorMain, String textColorSub, String dyeColor){
       try{
          List<Nation> nations = Nations.getNations();
@@ -513,7 +590,7 @@ public class NationsCommands {
             return -1;
          }
          
-         if(nations.stream().anyMatch(n -> n.getId().equals(nationId) || n.getName().equals(nationName))){
+         if(nationId.equals("all") || nationId.isBlank() || nations.stream().anyMatch(n -> n.getId().equals(nationId) || n.getName().equals(nationName))){
             src.sendError(Text.translatable("text.nations.nation_creation_error"));
             return -1;
          }
@@ -682,8 +759,14 @@ public class NationsCommands {
             return -1;
          }
          ServerPlayerEntity player = src.getPlayer();
+         ChunkPos chunkPos = pos.toChunkPos();
+         NationChunk chunk = Nations.getChunk(chunkPos);
+         if(chunk == null){
+            src.sendError(Text.translatable("text.nations.chunk_out_of_bounds"));
+            return -1;
+         }
          
-         ChunkGui chunkGui = new ChunkGui(player,pos.toChunkPos());
+         ChunkGui chunkGui = new ChunkGui(player,chunkPos);
          chunkGui.open();
          
          return 1;
@@ -769,7 +852,7 @@ public class NationsCommands {
       }
    }
    
-   public static int adminResearch(CommandContext<ServerCommandSource> ctx, String nationId, String researchId, boolean grant){
+   public static int adminResearch(CommandContext<ServerCommandSource> ctx, String nationId, String researchId, boolean grant, boolean removePostReqs){
       try{
          ServerCommandSource src = ctx.getSource();
          Nation nation = Nations.getNation(nationId);
@@ -798,6 +881,7 @@ public class NationsCommands {
                return 0;
             }
          }else{
+            nation.removeTech(tech,removePostReqs);
             src.sendFeedback(() -> Text.translatable("text.nations.removed_tech", tech.getName(), nation.getFormattedName()), true);
             return 1;
          }
@@ -959,6 +1043,163 @@ public class NationsCommands {
          }
          TimedEvents.doDailyTick(src.getServer());
          src.sendMessage(Text.translatable("text.nations.forced_daily_tick"));
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int addShopItem(CommandContext<ServerCommandSource> ctx, int price){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!src.isExecutedByPlayer()){
+            src.sendError(Text.translatable("text.nations.not_player"));
+            return -1;
+         }
+         ServerPlayerEntity player = src.getPlayer();
+         ItemStack mainhand = player.getMainHandStack();
+         ItemStack offhand = player.getOffHandStack();
+         if(mainhand.isEmpty() || offhand.isEmpty() || price < 1){
+            src.sendError(Text.translatable("text.nations.invalid_items_or_price"));
+            return -1;
+         }
+         
+         SHOP.getOffers().add(new Pair<>(mainhand.copy(), new Pair<>(offhand.getItem(),price)));
+         SHOP.save();
+         src.sendMessage(Text.translatable("text.nations.shop_entry_added"));
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int sendMail(CommandContext<ServerCommandSource> ctx, String nationId){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!src.isExecutedByPlayer()){
+            src.sendError(Text.translatable("text.nations.not_player"));
+            return -1;
+         }
+         ServerPlayerEntity player = src.getPlayer();
+         ItemStack mainhand = player.getMainHandStack();
+         if(mainhand.isEmpty()){
+            src.sendError(Text.translatable("text.nations.mainhand_empty"));
+            return -1;
+         }
+         
+         if(nationId.equals("all")){
+            for(Nation nation : getNations()){
+               nation.addMail(mainhand.copy());
+            }
+         }else{
+            Nation nation = Nations.getNation(nationId);
+            if(nation == null){
+               src.sendError(Text.translatable("text.nations.no_nation_error"));
+               return -1;
+            }
+            nation.addMail(mainhand.copy());
+         }
+         
+         src.sendMessage(Text.translatable("text.nations.mail_sent"));
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int announce(CommandContext<ServerCommandSource> ctx, String message){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         Nations.announce(Text.empty()
+               .append(Text.literal("!!! ").formatted(Formatting.BOLD,Formatting.DARK_RED))
+               .append(Text.literal(message).formatted(Formatting.BOLD,Formatting.RED))
+               .append(Text.literal(" !!!").formatted(Formatting.BOLD,Formatting.DARK_RED)));
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int researchStatus(CommandContext<ServerCommandSource> ctx){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!src.isExecutedByPlayer()){
+            src.sendError(Text.translatable("text.nations.not_player"));
+            return -1;
+         }
+         ServerPlayerEntity player = src.getPlayer();
+         Nation nation = Nations.getNation(player);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_player_nation_error"));
+            return -1;
+         }
+         
+         ResearchTech activeTech = nation.getActiveTech();
+         MutableText researchText = activeTech == null ? Text.translatable("text.nations.nothing") : activeTech.getName();
+         float percentage = activeTech == null ? 0 : 100*((float) nation.getProgress(activeTech) / activeTech.getCost());
+         src.sendMessage(Text.translatable("text.nations.currently_researching",
+               researchText.formatted(Formatting.LIGHT_PURPLE),
+               Text.literal(String.format("%03.2f",percentage)).formatted(Formatting.AQUA,Formatting.BOLD)
+         ).formatted(Formatting.DARK_AQUA));
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int leaderboard(CommandContext<ServerCommandSource> ctx){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         
+         ArrayList<Nation> order = new ArrayList<>(getNations());
+         order.sort(Comparator.comparingInt(n -> -n.getVictoryPoints()));
+         for(Nation nation : order){
+            src.sendMessage(Text.translatable("text.nations.victory_point_readout",
+                  nation.getFormattedNameTag(false),
+                  Text.literal(String.format("%,d",nation.getVictoryPoints())).formatted(Formatting.LIGHT_PURPLE,Formatting.BOLD),
+                  Text.translatable("text.nations.victory_points").formatted(Formatting.DARK_PURPLE)
+            ).formatted(Formatting.DARK_PURPLE));
+         }
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int setNextWar(CommandContext<ServerCommandSource> ctx, long time){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         Instant instant = Instant.ofEpochMilli(time);
+         ZonedDateTime zdt = instant.atZone(ZoneId.systemDefault());
+         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
+         
+         INationsDataComponent data = NATIONS_DATA.get(src.getServer().getOverworld());
+         data.setNextWar(time);
+         src.sendMessage(Text.translatable("text.nations.set_next_war",zdt.format(fmt)));
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int getNextWar(CommandContext<ServerCommandSource> ctx){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         INationsDataComponent data = NATIONS_DATA.get(src.getServer().getOverworld());
+         Instant instant = Instant.ofEpochMilli(data.getNextWar());
+         ZonedDateTime zdt = instant.atZone(ZoneId.systemDefault());
+         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
+         src.sendMessage(Text.translatable("text.nations.get_next_war",zdt.format(fmt)));
          return 1;
       }catch(Exception e){
          log(2,e.toString());

@@ -7,6 +7,9 @@ import eu.pb4.polymer.virtualentity.api.elements.InteractionElement;
 import eu.pb4.polymer.virtualentity.api.elements.ItemDisplayElement;
 import eu.pb4.polymer.virtualentity.api.elements.TextDisplayElement;
 import eu.pb4.polymer.virtualentity.api.elements.VirtualElement;
+import net.borisshoes.arcananovum.ArcanaNovum;
+import net.borisshoes.arcananovum.ArcanaRegistry;
+import net.borisshoes.arcananovum.cardinalcomponents.IArcanaProfileComponent;
 import net.borisshoes.arcananovum.core.ArcanaItem;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
@@ -19,6 +22,8 @@ import net.borisshoes.nations.research.ResearchTech;
 import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.NationsColors;
 import net.borisshoes.nations.utils.NationsUtils;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
 import net.minecraft.entity.decoration.DisplayEntity;
@@ -35,6 +40,7 @@ import net.minecraft.potion.Potion;
 import net.minecraft.potion.Potions;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -66,7 +72,7 @@ public class Nation {
    private ChunkPos foundLocation;
    private int foundHeight;
    private final String id;
-   private final String name;
+   private String name;
    private DyeColor dyeColor;
    private int textColor;
    private int textColorSub;
@@ -75,6 +81,7 @@ public class Nation {
    private int victoryPoints;
    private final Map<ResourceType,Integer> storedCoins;
    private int bankedResearchCoins;
+   private final ArrayList<ItemStack> mailbox;
    private ElementHolder hologram;
    private HolderAttachment attachment;
    private int interactCooldown = 0;
@@ -96,6 +103,7 @@ public class Nation {
       this.techQueue = new ArrayDeque<>();
       this.storedCoins = new HashMap<>();
       this.bankedResearchCoins = 0;
+      this.mailbox = new ArrayList<>();
       
       for(ResourceType value : ResourceType.values()){
          this.storedCoins.put(value,0);
@@ -105,7 +113,7 @@ public class Nation {
    private Nation(Set<UUID> members, Set<UUID> executors, Set<UUID> leaders, Set<NationChunk> chunks, ChunkPos foundLocation, int foundHeight,
                   String id, String name, DyeColor dyeColor, int textColor, int textColorSub,
                   Map<ResearchTech, Integer> techs, ArrayDeque<ResearchTech> techQueue, int victoryPoints,
-                  Map<ResourceType,Integer> storedCoins, int bankedResearchCoins){
+                  Map<ResourceType,Integer> storedCoins, int bankedResearchCoins, ArrayList<ItemStack> mailbox){
       this.members = members;
       this.executors = executors;
       this.leaders = leaders;
@@ -122,6 +130,7 @@ public class Nation {
       this.victoryPoints = victoryPoints;
       this.storedCoins = storedCoins;
       this.bankedResearchCoins = bankedResearchCoins;
+      this.mailbox = mailbox;
    }
    
    public void tick(ServerWorld serverWorld){
@@ -151,8 +160,17 @@ public class Nation {
             int progress = getProgress(activeTech);
             int cost = activeTech.getCost();
             int remaining = cost - progress;
-            int consumed = Math.min(remaining,Math.min(rate,bankedResearchCoins));
-            bankedResearchCoins -= consumed;
+            int maxConsumable = Math.min(remaining,rate);
+            int bankConsume = Math.min(maxConsumable,bankedResearchCoins);
+            int consumed = bankConsume;
+            if(bankConsume < maxConsumable){
+               int diff = maxConsumable-bankConsume;
+               int stored = this.storedCoins.get(ResourceType.RESEARCH);
+               int storeConsume = Math.min(stored,diff);
+               consumed += storeConsume;
+               this.storedCoins.put(ResourceType.RESEARCH, stored - storeConsume);
+            }
+            bankedResearchCoins -= bankConsume;
             techs.put(activeTech,progress+consumed);
             
             if(consumed == 0){
@@ -178,12 +196,21 @@ public class Nation {
          
          ResearchTech activeTech = getActiveTech();
          if(activeTech != null){
-            int rate = activeTech.getConsumptionRate() % 24;
+            int rate = activeTech.getConsumptionRate() / 24;
             int progress = getProgress(activeTech);
             int cost = activeTech.getCost();
             int remaining = cost - progress;
-            int consumed = Math.min(remaining,Math.min(rate,bankedResearchCoins));
-            bankedResearchCoins -= consumed;
+            int maxConsumable = Math.min(remaining,rate);
+            int bankConsume = Math.min(maxConsumable,bankedResearchCoins);
+            int consumed = bankConsume;
+            if(bankConsume < maxConsumable){
+               int diff = maxConsumable-bankConsume;
+               int stored = this.storedCoins.get(ResourceType.RESEARCH);
+               int storeConsume = Math.min(stored,diff);
+               consumed += storeConsume;
+               this.storedCoins.put(ResourceType.RESEARCH, stored - storeConsume);
+            }
+            bankedResearchCoins -= bankConsume;
             techs.put(activeTech,progress+consumed);
             
             if(consumed == remaining){
@@ -219,12 +246,24 @@ public class Nation {
       return storedCoins;
    }
    
+   public ArrayList<ItemStack> getMailbox(){
+      return mailbox;
+   }
+   
+   public void addMail(ItemStack item){
+      this.mailbox.add(item);
+   }
+   
    public void collectCoins(ServerWorld world){
+      Vec3d spawnPos = getHologramPos().add(0,2,0);
       this.storedCoins.forEach((type, amount) ->{
          int sum = amount;
          int maxStackSize = type.getCoin().getMaxCount();
-         Vec3d spawnPos = getHologramPos().add(0,2,0);
-         
+         while(sum > 1000){
+            sum -= 1000;
+            ItemStack newStack = new ItemStack(type.getBullion(),1);
+            ItemScatterer.spawn(world,spawnPos.x,spawnPos.y,spawnPos.z,newStack);
+         }
          while(sum > 0){
             int size = Math.min(sum,world.getRandom().nextBetween((int) Math.min(maxStackSize,amount/32.0), maxStackSize+1));
             sum -= size;
@@ -233,6 +272,12 @@ public class Nation {
          }
       });
       this.storedCoins.replaceAll((t, v) -> 0);
+      
+      for(ItemStack stack : mailbox){
+         ItemScatterer.spawn(world,spawnPos.x,spawnPos.y,spawnPos.z,stack);
+      }
+      mailbox.clear();
+      
       this.updateHolo = true;
    }
    
@@ -253,7 +298,7 @@ public class Nation {
       ResearchTech activeTech = getActiveTech();
       TextDisplayElement line1 = new TextDisplayElement(getFormattedName().formatted(Formatting.BOLD));
       TextDisplayElement line2 = new TextDisplayElement(Text.literal(members.size()+" ").withColor(getTextColor()).formatted(Formatting.BOLD).append(Text.translatable("text.nations.members").withColor(getTextColorSub())));
-      TextDisplayElement line3 = new TextDisplayElement(Text.literal(victoryPoints+" ").withColor(getTextColor()).formatted(Formatting.BOLD).append(Text.translatable("text.nations.victory_points").withColor(getTextColorSub())));
+      TextDisplayElement line3 = new TextDisplayElement(Text.literal(String.format("%,d",victoryPoints)+" ").withColor(getTextColor()).formatted(Formatting.BOLD).append(Text.translatable("text.nations.victory_points").withColor(getTextColorSub())));
       MutableText researchText = activeTech == null ? Text.translatable("text.nations.nothing") : activeTech.getName();
       float percentage = activeTech == null ? 0 : 100*((float) getProgress(activeTech) / activeTech.getCost());
       TextDisplayElement line4 = new TextDisplayElement(Text.translatable("text.nations.currently_researching",researchText.formatted(Formatting.LIGHT_PURPLE),Text.literal(String.format("%03.2f",percentage)).formatted(Formatting.DARK_AQUA,Formatting.BOLD)).formatted(Formatting.AQUA));
@@ -319,7 +364,7 @@ public class Nation {
             if(tickCount == 200 || updateHolo){
                ResearchTech activeTech = getActiveTech();
                MutableText text2 = Text.literal(members.size()+" ").withColor(getTextColor()).formatted(Formatting.BOLD).append(Text.translatable("text.nations.members").withColor(getTextColorSub()));
-               MutableText text3 = Text.literal(victoryPoints+" ").withColor(getTextColor()).formatted(Formatting.BOLD).append(Text.translatable("text.nations.victory_points").withColor(getTextColorSub()));
+               MutableText text3 = Text.literal(String.format("%,d",victoryPoints)+" ").withColor(getTextColor()).formatted(Formatting.BOLD).append(Text.translatable("text.nations.victory_points").withColor(getTextColorSub()));
                MutableText researchText = activeTech == null ? Text.translatable("text.nations.nothing") : activeTech.getName();
                float percentage = activeTech == null ? 0 : 100*((float) getProgress(activeTech) / activeTech.getCost());
                MutableText text4 = Text.translatable("text.nations.currently_researching",researchText.formatted(Formatting.LIGHT_PURPLE),Text.literal(String.format("%03.2f",percentage)).formatted(Formatting.DARK_AQUA,Formatting.BOLD)).formatted(Formatting.AQUA);
@@ -345,7 +390,7 @@ public class Nation {
       line3.setBillboardMode(DisplayEntity.BillboardMode.VERTICAL);
       icon.setBillboardMode(DisplayEntity.BillboardMode.VERTICAL);
       line4.setBillboardMode(DisplayEntity.BillboardMode.VERTICAL);
-      icon.setScale(new Vector3f(1.5f,1.5f,1.5f));
+      icon.setScale(new Vector3f(1.5f,1.5f,1f));
       line4.setLineWidth(1000);
       
       holder.addElement(line1);
@@ -527,6 +572,83 @@ public class Nation {
       return members.contains(uuid) && !leaders.contains(uuid) && executors.contains(uuid);
    }
    
+   public void changeName(String newName){
+      this.name = newName;
+      for(ServerPlayerEntity player : getOnlinePlayers()){
+         for(ServerPlayerEntity p : player.getServer().getPlayerManager().getPlayerList()){
+            p.networkHandler.sendPacket(PlayerListS2CPacket.entryFromPlayer(player.getServer().getPlayerManager().getPlayerList()));
+         }
+         Nations.getPlayer(player).removePlayerTeam(player.getServer());
+         Nations.getPlayer(player).addPlayerTeam(player.getServer());
+      }
+      
+      for(CapturePoint cap : getCapturePoints()){
+         if(cap.getControllingNation() != null && cap.getControllingNation().equals(this)){
+            DynmapCalls.updateCapturePointMarker(cap);
+         }
+      }
+      DynmapCalls.redrawNationBorder(this);
+      if(hologram != null){
+         hologram.destroy();
+         hologram = null;
+      }
+   }
+   
+   public void changeColors(int newTextColor, int newTextColorSub, DyeColor newDyeColor){
+      this.textColor = newTextColor;
+      this.textColorSub = newTextColorSub;
+      this.dyeColor = newDyeColor;
+      
+      for(ServerPlayerEntity player : getOnlinePlayers()){
+         for(ServerPlayerEntity p : player.getServer().getPlayerManager().getPlayerList()){
+            p.networkHandler.sendPacket(PlayerListS2CPacket.entryFromPlayer(player.getServer().getPlayerManager().getPlayerList()));
+         }
+         Nations.getPlayer(player).removePlayerTeam(player.getServer());
+         Nations.getPlayer(player).addPlayerTeam(player.getServer());
+      }
+      
+      for(CapturePoint cap : getCapturePoints()){
+         if(cap.getControllingNation() != null && cap.getControllingNation().equals(this)){
+            cap.transferOwnership(SERVER.getOverworld(),this);
+         }
+      }
+      recolorMonument(SERVER.getOverworld());
+      DynmapCalls.redrawNationBorder(this);
+      if(hologram != null){
+         hologram.destroy();
+         hologram = null;
+      }
+   }
+   
+   private void recolorMonument(ServerWorld world){
+      DyeColor newColor = getDyeColor();
+      StructurePlacer.Structure structure = NATION_STRUCTURE;
+      BlockPos origin = getFoundingPos();
+      int[][][] pattern = structure.statePattern();
+      for(int i = 0; i < pattern.length; i++){
+         for(int j = 0; j < pattern[0].length; j++){
+            for(int k = 0; k < pattern[0][0].length; k++){
+               if(pattern[i][j][k] == -1) continue;
+               BlockPos pos = origin.add(i,j,k);
+               BlockState curState = world.getBlockState(pos);
+               BlockState newState = NationsColors.redyeBlock(curState, newColor);
+               if(curState.isOf(newState.getBlock())) continue;
+               world.setBlockState(pos,newState, Block.NOTIFY_ALL_AND_REDRAW);
+            }
+         }
+      }
+   }
+   
+   public List<ServerPlayerEntity> getOnlinePlayers(){
+      ArrayList<ServerPlayerEntity> players = new ArrayList<>();
+      for(ServerPlayerEntity player : SERVER.getPlayerManager().getPlayerList()){
+         if(hasPlayer(player)){
+            players.add(player);
+         }
+      }
+      return players;
+   }
+   
    public void addPlayer(ServerPlayerEntity player){
       for(Nation nation : getNations()){
          if(!nation.equals(this) && nation.hasPlayer(player)){
@@ -634,7 +756,7 @@ public class Nation {
    }
    
    public void addVictoryPoints(int points){
-      this.victoryPoints += points;
+      this.victoryPoints = Math.max(0,victoryPoints+points);
    }
    
    public boolean isFounded(){
@@ -678,7 +800,7 @@ public class Nation {
             blockCount++;
          }
       }
-      int height = (int) (Math.round(sum/blockCount)+1);
+      int height = (int) (Math.round(sum/blockCount)-1);
       BlockPos origin = pos.getBlockPos(0,height,0);
       BlockPos corner = pos.getBlockPos(15,height+NATION_STRUCTURE.statePattern()[0].length,15);
       
@@ -697,6 +819,7 @@ public class Nation {
             if (Math.abs(dx) + Math.abs(dz) <= radius) {
                ChunkPos chunkPos = new ChunkPos(pos.x + dx, pos.z + dz);
                NationChunk nationChunk = Nations.getChunk(chunkPos);
+               if(nationChunk == null) continue;
                if(!nationChunk.isInfluenced()){
                   nationChunk.setControllingNationId(getId());
                   nationChunk.setInfluenced(true);
@@ -730,13 +853,51 @@ public class Nation {
       ).withColor(getTextColorSub());
       Nations.announce(announceText);
       
+      techQueue.removeIf(iterTech -> iterTech.equals(tech));
+      
       addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_RESEARCH_CFG));
       long count = Nations.getNations().stream().filter(nation -> nation.hasCompletedTech(tech.getKey())).count();
       if(count == 1){
          addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_RESEARCH_BONUS_CFG));
       }
       
-      // TODO give arcana stuff + vp
+      for(ServerPlayerEntity player : getOnlinePlayers()){
+         IArcanaProfileComponent arcanaProfile = ArcanaNovum.data(player);
+         for(ArcanaItem arcanaItem : ArcanaRegistry.ARCANA_ITEMS){
+            if(canCraft(arcanaItem) || arcanaItem.getId().equals(ArcanaRegistry.ARCANE_TOME.getId())){
+               arcanaProfile.addResearchedItem(arcanaItem.getId());
+            }else{
+               arcanaProfile.removeResearchedItem(arcanaItem.getId());
+            }
+         }
+      }
+      
+      if(tech.isArcanaItem()){
+         ArcanaItem item = NationsRegistry.ARCANA_TECHS.entrySet().stream().filter(entry -> entry.getValue().equals(tech.getKey())).map(Map.Entry::getKey).findFirst().orElse(null);
+         if(item != null && item.getId().contains("altar")){
+            // Give Altar
+            addMail(item.addCrafter(item.getNewItem(),JERALD_UUID,false,SERVER));
+         }
+      }else if(tech.getKey().equals(NationsRegistry.ARCANA)){
+         // Give Forge
+         addMail(ArcanaRegistry.STARLIGHT_FORGE.addCrafter(ArcanaRegistry.STARLIGHT_FORGE.getNewItem(),JERALD_UUID,false,SERVER));
+         addMail(ArcanaRegistry.ARCANE_TOME.addCrafter(ArcanaRegistry.ARCANE_TOME.getNewItem(),JERALD_UUID,false,SERVER));
+      }else if(tech.getKey().equals(NationsRegistry.ENCHANTING)){
+         // Give Enchanter
+         addMail(ArcanaRegistry.MIDNIGHT_ENCHANTER.addCrafter(ArcanaRegistry.MIDNIGHT_ENCHANTER.getNewItem(),JERALD_UUID,false,SERVER));
+      }else if(tech.getKey().equals(NationsRegistry.SMITHING)){
+         // Give Anvil
+         addMail(ArcanaRegistry.TWILIGHT_ANVIL.addCrafter(ArcanaRegistry.TWILIGHT_ANVIL.getNewItem(),JERALD_UUID,false,SERVER));
+      }else if(tech.getKey().equals(NationsRegistry.FLETCHING)){
+         // Give Fletchery
+         addMail(ArcanaRegistry.RADIANT_FLETCHERY.addCrafter(ArcanaRegistry.RADIANT_FLETCHERY.getNewItem(),JERALD_UUID,false,SERVER));
+      }else if(tech.getKey().equals(NationsRegistry.FORGING)){
+         // Give Core
+         addMail(ArcanaRegistry.STELLAR_CORE.addCrafter(ArcanaRegistry.STELLAR_CORE.getNewItem(),JERALD_UUID,false,SERVER));
+      }else if(tech.getKey().equals(NationsRegistry.ADVANCED_ARCANA)){
+         // Give Singularity
+         addMail(ArcanaRegistry.ARCANE_SINGULARITY.addCrafter(ArcanaRegistry.ARCANE_SINGULARITY.getNewItem(),JERALD_UUID,false,SERVER));
+      }
    }
    
    public boolean canClaimOrInfluenceChunk(ChunkPos pos){
@@ -772,9 +933,20 @@ public class Nation {
       }
    }
    
-   public boolean removeTech(ResearchTech newTech){
+   public boolean removeTech(ResearchTech newTech, boolean withPostReqs){
+      List<ResearchTech> postreqs = new ArrayList<>();
+      techs.forEach((tech, prog) -> {
+         if(tech.hasPrereq(newTech)){
+            postreqs.add(tech);
+         }
+      });
       if(techs.containsKey(newTech)){
          techs.remove(newTech);
+         if(withPostReqs){
+            for(ResearchTech postreq : postreqs){
+               removeTech(postreq, true);
+            }
+         }
          return true;
       }else{
          return false;
@@ -890,6 +1062,17 @@ public class Nation {
    
    public boolean canCraft(ArcanaItem item){
       RegistryKey<ResearchTech> neededTech = NationsRegistry.ARCANA_TECHS.get(item);
+      if(item.getId().equals(ArcanaRegistry.ARCANE_TOME.getId())) return hasCompletedTech(NationsRegistry.ARCANA);
+      if(item.getId().equals(ArcanaRegistry.STARLIGHT_FORGE.getId())) return hasCompletedTech(NationsRegistry.ARCANA);
+      if(item.getId().equals(ArcanaRegistry.RADIANT_FLETCHERY.getId())) return hasCompletedTech(NationsRegistry.FLETCHING);
+      if(item.getId().equals(ArcanaRegistry.MIDNIGHT_ENCHANTER.getId())) return hasCompletedTech(NationsRegistry.ENCHANTING);
+      if(item.getId().equals(ArcanaRegistry.TWILIGHT_ANVIL.getId())) return hasCompletedTech(NationsRegistry.SMITHING);
+      if(item.getId().equals(ArcanaRegistry.STELLAR_CORE.getId())) return hasCompletedTech(NationsRegistry.FORGING);
+      if(item.getId().equals(ArcanaRegistry.ARCANE_SINGULARITY.getId())) return hasCompletedTech(NationsRegistry.ADVANCED_ARCANA);
+      if(item.getId().equals(ArcanaRegistry.SPEAR_OF_TENBROUS.getId())) return true;
+      if(item.getId().equals(ArcanaRegistry.GREAVES_OF_GAIALTUS.getId())) return true;
+      if(item.getId().equals(ArcanaRegistry.PICKAXE_OF_CEPTYUS.getId())) return true;
+      
       if(neededTech == null) return false;
       for(ResearchTech tech : getCompletedTechs()){
          if(tech.getKey().equals(neededTech)){
@@ -909,17 +1092,51 @@ public class Nation {
       return enchants;
    }
    
+   public int getArcanaLevels(){
+      int levels = 1;
+      for(ResearchTech tech : getCompletedTechs()){
+         if(tech.isArcanaItem()){
+            levels += 2;
+         }else if(tech.isEnchant()){
+            for(Map.Entry<Pair<RegistryKey<Enchantment>, Integer>, RegistryKey<ResearchTech>> entry : NationsRegistry.ENCHANT_TECHS.entrySet()){
+               Pair<RegistryKey<Enchantment>, Integer> pair = entry.getKey();
+               if(entry.getValue().equals(tech.getKey())){
+                  if(MiscUtils.getEnchantment(pair.getLeft()).value().getMaxLevel() == pair.getRight()){
+                     levels += 1;
+                  }
+               }
+            }
+         }
+      }
+      return Math.min(100,levels);
+   }
+   
+   public int getArcanaSkillPoints(){
+      int skillPoints = 1;
+      for(ResearchTech tech : getCompletedTechs()){
+         if(tech.isArcanaItem()){
+            skillPoints += 5;
+         }else if(tech.isEnchant()){
+            skillPoints += 1;
+         }else if(tech.isPotion()){
+            skillPoints += 1;
+         }
+      }
+      return skillPoints;
+   }
+   
    @Override
    public boolean equals(Object obj){
       if(this == obj) return true;
       return obj instanceof Nation nat && nat.getId().equals(this.id);
    }
    
-   public NbtCompound saveToNbt(NbtCompound compound){
+   public NbtCompound saveToNbt(NbtCompound compound, RegistryWrapper.WrapperLookup wrapperLookup){
       NbtList memberList = new NbtList();
       NbtList executorList = new NbtList();
       NbtList leaderList = new NbtList();
       NbtList chunkList = new NbtList();
+      NbtList mailList = new NbtList();
       NbtCompound techList = new NbtCompound();
       NbtCompound research = new NbtCompound();
       NbtCompound posComp = new NbtCompound();
@@ -928,6 +1145,7 @@ public class Nation {
       executorList.addAll(executors.stream().map(uuid -> NbtString.of(uuid.toString())).collect(Collectors.toSet()));
       leaderList.addAll(leaders.stream().map(uuid -> NbtString.of(uuid.toString())).collect(Collectors.toSet()));
       chunkList.addAll(chunks.stream().map(NationChunk::getPosNbt).collect(Collectors.toSet()));
+      mailList.addAll(mailbox.stream().map(stack -> stack.toNbt(wrapperLookup)).collect(Collectors.toSet()));
       
       ResearchTech[] techQList = techQueue.toArray(new ResearchTech[]{});
       for(int i = 0; i < techQueue.size(); i++){
@@ -952,6 +1170,7 @@ public class Nation {
       compound.put("techQueue",techList);
       compound.put("foundLocation",posComp);
       compound.put("coins",coins);
+      compound.put("mailbox",mailList);
       compound.putString("id",id);
       compound.putString("name",name);
       compound.putString("dyeColor",dyeColor.getName());
@@ -962,7 +1181,7 @@ public class Nation {
       return compound;
    }
    
-   public static Nation loadFromNbt(NbtCompound compound, HashMap<ChunkPos,NationChunk> nationChunks){
+   public static Nation loadFromNbt(NbtCompound compound, HashMap<ChunkPos,NationChunk> nationChunks, RegistryWrapper.WrapperLookup wrapperLookup){
       try{
          Set<UUID> members = new HashSet<>();
          Set<UUID> executors = new HashSet<>();
@@ -970,10 +1189,12 @@ public class Nation {
          Set<NationChunk> chunks = new HashSet<>();
          Map<ResearchTech, Integer> research = new HashMap<>();
          Map<ResourceType, Integer> coins = new HashMap<>();
+         ArrayList<ItemStack> mail = new ArrayList<>();
          compound.getList("members", NbtElement.STRING_TYPE).forEach(uuid -> members.add(MiscUtils.getUUID(uuid.asString())));
          compound.getList("executors", NbtElement.STRING_TYPE).forEach(uuid -> executors.add(MiscUtils.getUUID(uuid.asString())));
          compound.getList("leaders", NbtElement.STRING_TYPE).forEach(uuid -> leaders.add(MiscUtils.getUUID(uuid.asString())));
          compound.getList("chunks", NbtElement.COMPOUND_TYPE).forEach(comp -> chunks.add(nationChunks.get(new ChunkPos(((NbtCompound)comp).getInt("x"),((NbtCompound)comp).getInt("z")))));
+         compound.getList("mailbox",NbtElement.COMPOUND_TYPE).forEach(comp -> mail.add(ItemStack.fromNbtOrEmpty(wrapperLookup, (NbtCompound) comp)));
          
          NbtCompound techComp = compound.getCompound("techQueue");
          Map<Integer,ResearchTech> map = new TreeMap<>();
@@ -1024,7 +1245,8 @@ public class Nation {
                techQueue,
                compound.getInt("victoryPoints"),
                coins,
-               compound.getInt("bankedResearchCoins")
+               compound.getInt("bankedResearchCoins"),
+               mail
          );
       }catch(Exception e){
          log(3,e.toString());

@@ -73,7 +73,7 @@ public class DynmapFunctions {
       CircleMarker circleMarker = capturePointsMarkerSet.createCircleMarker(cap.getId().toString(),cap.getMarkerLabel(),false,getWorldName(),capPos.getX(),capPos.getY(),capPos.getZ(),16,16,false);
       int color = cap.getControllingNation() == null ? 0xffffff : cap.getControllingNation().getTextColor();
       circleMarker.setLineStyle(2,0.8,color);
-      circleMarker.setFillStyle(0.1,color);
+      circleMarker.setFillStyle(cap.getAuctionStartTime() != 0 ? 0.5 : 0.1,color);
    }
    
    protected static void updateCapturePointMarker(CapturePoint cap){
@@ -88,7 +88,7 @@ public class DynmapFunctions {
       circleMarker.setLabel(cap.getMarkerLabel());
       int color = cap.getControllingNation() == null ? 0xffffff : cap.getControllingNation().getTextColor();
       circleMarker.setLineStyle(2,0.8,color);
-      circleMarker.setFillStyle(0.1,color);
+      circleMarker.setFillStyle(cap.getAuctionStartTime() != 0 ? 0.5 : 0.1,color);
    }
    
    protected static void addSpawnMarker(){

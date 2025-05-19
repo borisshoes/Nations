@@ -35,7 +35,7 @@ public class BrewingStandEntityMixin {
       if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return false;
       ChunkPos chunkPos = new ChunkPos(pos);
       NationChunk nationChunk = Nations.getChunk(chunkPos);
-      if(nationChunk == null) return false;
+      if(nationChunk == null || !nationChunk.isClaimed()) return false;
       Nation nation = nationChunk.getControllingNation();
       if(nation == null) return false;
       

@@ -12,6 +12,6 @@ public class GrowthCoinSlot extends Slot {
    
    @Override
    public boolean canInsert(ItemStack stack){
-      return super.canInsert(stack) && stack.isOf(NationsRegistry.GROWTH_COIN_ITEM);
+      return super.canInsert(stack) && (stack.isOf(NationsRegistry.GROWTH_COIN_ITEM) || stack.isOf(NationsRegistry.GROWTH_BULLION_ITEM));
    }
 }

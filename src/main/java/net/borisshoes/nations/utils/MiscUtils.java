@@ -3,12 +3,16 @@ package net.borisshoes.nations.utils;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
 import net.borisshoes.nations.Nations;
+import net.borisshoes.nations.gameplay.ResourceType;
 import net.borisshoes.nations.items.GraphicalItem;
+import net.borisshoes.nations.items.ResourceBullionItem;
+import net.borisshoes.nations.items.ResourceCoinItem;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.RegistryKey;
@@ -17,6 +21,7 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Pair;
+import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Vector2i;
@@ -64,8 +69,116 @@ public class MiscUtils {
       return values[nextIndex];
    }
    
+   public static boolean removeCoins(PlayerEntity player, ResourceType coinType, int amount) {
+      if (player.isCreative()) return true;
+      
+      Item resourceCoinItem = coinType.getCoin();
+      Item resourceBullionItem = coinType.getBullion();
+      PlayerInventory inv = player.getInventory();
+      int totalCoins = 0, totalBullions = 0;
+      
+      for (int i = 0; i < inv.size(); i++) {
+         ItemStack stack = inv.getStack(i);
+         if (stack.isEmpty()) continue;
+         if (stack.getItem() instanceof ResourceCoinItem coinItem && coinItem.getType() == coinType) {
+            totalCoins += stack.getCount();
+         }else if (stack.getItem() instanceof ResourceBullionItem bullionItem && bullionItem.getType() == coinType) {
+            totalBullions += stack.getCount();
+         }
+      }
+      
+      long totalValue = totalCoins + (long)totalBullions * 1000;
+      if (totalValue < amount) {
+         return false;
+      }
+      
+
+      int bullionsToUse = Math.min(amount / 1000, totalBullions);
+      int remainder = amount - bullionsToUse * 1000;
+      int coinsToUse;
+      int leftoverChange = 0;
+      
+      if (remainder > 0) {
+         int coinStacksNeeded = (remainder + resourceCoinItem.getMaxCount()-1) / resourceCoinItem.getMaxCount();
+         if (bullionsToUse < totalBullions && coinStacksNeeded > 1) {
+            bullionsToUse++;
+            leftoverChange = bullionsToUse * 1000 - amount;
+            coinsToUse = 0;
+         } else {
+            coinsToUse = remainder;
+         }
+      } else {
+         coinsToUse = 0;
+      }
+      
+      Map<ItemStack,Integer> bullionRemovals = new LinkedHashMap<>();
+      Map<ItemStack,Integer> coinRemovals    = new LinkedHashMap<>();
+      
+      int needB = bullionsToUse;
+      for (int i = 0; i < inv.size() && needB > 0; i++) {
+         ItemStack stack = inv.getStack(i);
+         if (stack.getItem() instanceof ResourceBullionItem bi && bi.getType() == coinType) {
+            int take = Math.min(stack.getCount(), needB);
+            bullionRemovals.put(stack, take);
+            needB -= take;
+         }
+      }
+      
+      List<ItemStack> coinStacks = new ArrayList<>();
+      for (int i = 0; i < inv.size(); i++) {
+         ItemStack stack = inv.getStack(i);
+         if (stack.getItem() instanceof ResourceCoinItem ci && ci.getType() == coinType) {
+            coinStacks.add(stack);
+         }
+      }
+      coinStacks.sort((a, b) -> Integer.compare(b.getCount(), a.getCount()));
+      int needC = coinsToUse;
+      for (ItemStack stack : coinStacks) {
+         if (needC <= 0) break;
+         int take = Math.min(stack.getCount(), needC);
+         coinRemovals.put(stack, take);
+         needC -= take;
+      }
+      
+      for (var e : bullionRemovals.entrySet()) {
+         ItemStack stack = e.getKey();
+         int toRemove = e.getValue();
+         if(stack.getCount() == toRemove){
+            inv.removeOne(stack);
+         }else{
+            stack.setCount(stack.getCount()-toRemove);
+         }
+      }
+      for (var e : coinRemovals.entrySet()) {
+         ItemStack stack = e.getKey();
+         int toRemove = e.getValue();
+         if(stack.getCount() == toRemove){
+            inv.removeOne(stack);
+         }else{
+            stack.setCount(stack.getCount()-toRemove);
+         }
+      }
+      
+      if (leftoverChange > 0) {
+         ItemStack[] stackList = new ItemStack[(leftoverChange + resourceCoinItem.getMaxCount()-1) / resourceCoinItem.getMaxCount()];
+         int i = 0;
+         while (leftoverChange > 0) {
+            int give = Math.min(leftoverChange, resourceCoinItem.getMaxCount());
+            leftoverChange -= give;
+            stackList[i] = new ItemStack(resourceCoinItem, give);
+            i++;
+         }
+         MiscUtils.returnItems(new SimpleInventory(stackList),player);
+      }
+      
+      return true;
+   }
+   
    public static boolean removeItems(PlayerEntity player, Item item, int count){
       if(player.isCreative()) return true;
+      if(item instanceof ResourceCoinItem coinItem){
+         return removeCoins(player,coinItem.getType(),count);
+      }
       int remaining = count;
       PlayerInventory inv = player.getInventory();
       int[] slots = new int[inv.size()];

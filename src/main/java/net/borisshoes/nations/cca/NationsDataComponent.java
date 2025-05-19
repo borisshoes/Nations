@@ -3,6 +3,7 @@ package net.borisshoes.nations.cca;
 import net.borisshoes.nations.gameplay.CapturePoint;
 import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.gameplay.NationChunk;
+import net.borisshoes.nations.gameplay.WarManager;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -172,10 +173,11 @@ public class NationsDataComponent implements INationsDataComponent {
       
       for(NbtElement e : nationList){
          NbtCompound nationComp = (NbtCompound) e;
-         Nation nation = Nation.loadFromNbt(nationComp, nationChunks);
+         Nation nation = Nation.loadFromNbt(nationComp, nationChunks, wrapperLookup);
          if(nation != null) nations.put(nation.getId(),nation);
       }
       capturePoints.addAll(capsList.stream().map(e -> CapturePoint.loadFromNbt((NbtCompound) e)).collect(Collectors.toSet()));
+      WarManager.loadWarData(nbtCompound.getCompound("warData"));
    }
    
    @Override
@@ -184,7 +186,7 @@ public class NationsDataComponent implements INationsDataComponent {
       NbtList capsList = new NbtList();
       NbtList chunkList = new NbtList();
       
-      nationList.addAll(nations.values().stream().map(nation -> nation.saveToNbt(new NbtCompound())).collect(Collectors.toSet()));
+      nationList.addAll(nations.values().stream().map(nation -> nation.saveToNbt(new NbtCompound(), wrapperLookup)).collect(Collectors.toSet()));
       capsList.addAll(capturePoints.stream().map(capturePoint -> capturePoint.saveToNbt(new NbtCompound())).collect(Collectors.toSet()));
       chunkList.addAll(nationChunks.values().stream().map(nationChunk -> nationChunk.saveToNbt(new NbtCompound())).collect(Collectors.toSet()));
       
@@ -192,6 +194,7 @@ public class NationsDataComponent implements INationsDataComponent {
       nbtCompound.put("capturePoints",capsList);
       nbtCompound.put("chunks",chunkList);
       nbtCompound.put("riftData",riftData);
+      nbtCompound.put("warData",WarManager.saveWarData(new NbtCompound()));
       nbtCompound.putBoolean("initialized",worldInitialized);
       nbtCompound.putLong("nextWar",nextWar);
       nbtCompound.putLong("nextRift",nextRift);

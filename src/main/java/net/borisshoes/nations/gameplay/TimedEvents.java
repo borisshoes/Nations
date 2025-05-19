@@ -50,7 +50,8 @@ public class TimedEvents {
       
       
       if(curTime > nextWar){ // Do War
-         TimedEvents.startWar(server);
+         boolean warEnabled = NationsConfig.getBoolean(NationsRegistry.WAR_ENABLED_CFG);
+         if(warEnabled) TimedEvents.startWar(server);
          data.setNextWar(now.plusWeeks(1L).toEpochSecond()*1000L);
       }
       
@@ -69,23 +70,20 @@ public class TimedEvents {
    }
    
    public static void doDailyTick(MinecraftServer server){
-      System.out.println("Doing Daily Tick");
       Nations.getCapturePoints().forEach(cap -> cap.dailyTick(server.getOverworld()));
       Nations.getNations().forEach(nation -> nation.dailyTick(server.getOverworld()));
    }
    
    public static void doHourlyTick(MinecraftServer server){
-      System.out.println("Doing Hourly Tick");
       Nations.getCapturePoints().forEach(cap -> cap.hourlyTick(server.getOverworld()));
       Nations.getNations().forEach(nation -> nation.hourlyTick(server.getOverworld()));
    }
    
    private static void startWar(MinecraftServer server){
-      System.out.println("Starting War");
+      WarManager.startWar();
    }
    
    private static void openRift(MinecraftServer server){
-      System.out.println("Starting Rift");
       INationsDataComponent data = NATIONS_DATA.get(server.getOverworld());
       int duration = NationsConfig.getInt(NationsRegistry.RIFT_DURATION_CFG);
       int warmup = NationsConfig.getInt(NationsRegistry.RIFT_WARMUP_CFG);

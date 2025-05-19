@@ -34,7 +34,7 @@ public class CrafterBlockMixin {
       NationChunk nationChunk = Nations.getChunk(chunkPos);
       if(nationChunk == null) return Optional.empty();
       Nation nation = nationChunk.getControllingNation();
-      if(nation == null) return Optional.empty();
+      if(nation == null || !nationChunk.isClaimed()) return Optional.empty();
       return nation.canCraft(item) ? original : Optional.empty();
    }
    

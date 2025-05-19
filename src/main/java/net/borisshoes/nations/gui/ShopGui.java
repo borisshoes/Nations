@@ -11,6 +11,7 @@ import net.borisshoes.nations.gui.core.GuiFilter;
 import net.borisshoes.nations.gui.core.GuiHelper;
 import net.borisshoes.nations.gui.core.GuiSort;
 import net.borisshoes.nations.items.GraphicalItem;
+import net.borisshoes.nations.items.ResourceBullionItem;
 import net.borisshoes.nations.items.ResourceCoinItem;
 import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.NationsColors;
@@ -42,12 +43,11 @@ public class ShopGui extends SimpleGui {
    private int pageNum;
    private List<Pair<ItemStack,Pair<Item,Integer>>> itemList;
    
-   
    public ShopGui(ServerPlayerEntity player){
       super(ScreenHandlerType.GENERIC_9X6,player,false);
       this.sort = ShopSort.getStaticDefault();
       this.filter = ShopFilter.getStaticDefault();
-      setTitle(Text.translatable("gui.nations.transfer_cap_gui_title_short"));
+      setTitle(Text.translatable("gui.nations.shop_title"));
       build();
    }
    
@@ -117,7 +117,10 @@ public class ShopGui extends SimpleGui {
       
       public static final ShopFilter NONE = new ShopFilter("text.nations.none", Formatting.WHITE, entry -> true);
       public static final ShopFilter MATERIALS = new ShopFilter("text.nations.materials", Formatting.GOLD, entry -> entry.getRight().getLeft() == NationsRegistry.MATERIAL_COIN_ITEM && !(entry.getLeft().getItem() instanceof ResourceCoinItem));
-      public static final ShopFilter CONVERSION = new ShopFilter("text.nations.conversion", Formatting.LIGHT_PURPLE, entry -> entry.getRight().getLeft() instanceof ResourceCoinItem && entry.getLeft().getItem() instanceof ResourceCoinItem);
+      public static final ShopFilter CONVERSION = new ShopFilter("text.nations.conversion", Formatting.LIGHT_PURPLE, entry ->
+            (entry.getRight().getLeft() instanceof ResourceCoinItem && entry.getLeft().getItem() instanceof ResourceCoinItem) ||
+                  (entry.getRight().getLeft() instanceof ResourceBullionItem && entry.getLeft().getItem() instanceof ResourceBullionItem)
+      );
       public static final ShopFilter SPAWNERS = new ShopFilter("text.nations.spawners", Formatting.DARK_AQUA, entry -> entry.getLeft().isOf(Items.SPAWNER));
       public static final ShopFilter BUYING = new ShopFilter("text.nations.buying", Formatting.GREEN, entry -> !(entry.getRight().getLeft() instanceof ResourceCoinItem) && entry.getLeft().getItem() instanceof ResourceCoinItem);
       

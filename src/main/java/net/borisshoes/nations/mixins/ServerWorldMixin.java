@@ -9,6 +9,8 @@ import net.borisshoes.nations.gameplay.NationChunk;
 import net.borisshoes.nations.land.NationsLand;
 import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.block.*;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -21,6 +23,8 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.BooleanSupplier;
+
+import static net.borisshoes.nations.cca.PlayerComponentInitializer.PLAYER_DATA;
 
 @Mixin(ServerWorld.class)
 public class ServerWorldMixin {

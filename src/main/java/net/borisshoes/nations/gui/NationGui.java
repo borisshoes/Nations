@@ -15,6 +15,7 @@ import net.borisshoes.nations.gui.core.GuiFilter;
 import net.borisshoes.nations.gui.core.GuiHelper;
 import net.borisshoes.nations.gui.core.GuiSort;
 import net.borisshoes.nations.items.GraphicalItem;
+import net.borisshoes.nations.items.ResourceBullionItem;
 import net.borisshoes.nations.research.ResearchTech;
 import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.NationsColors;
@@ -169,14 +170,19 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
       for(int i = 0; i < getSize(); i++){
          setSlot(i,blank);
       }
+      int mailSize = nation.getMailbox().size();
       
       GuiElementBuilder collectItem = new GuiElementBuilder(NationsRegistry.GROWTH_COIN_ITEM).hideDefaultTooltip();
       Map<ResourceType,Integer> storedCoins = nation.getStoredCoins();
-      collectItem.setName(Text.translatable("gui.nations.nation_collect_title").formatted(Formatting.YELLOW,Formatting.BOLD));
+      collectItem.setName(Text.translatable(mailSize > 0 ? "gui.nations.nation_collect_with_mail" : "gui.nations.nation_collect_title").formatted(Formatting.YELLOW,Formatting.BOLD));
       collectItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,d", storedCoins.get(ResourceType.GROWTH))+" ").formatted(Formatting.GREEN,Formatting.BOLD)).append(Text.translatable(ResourceType.GROWTH.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.DARK_GREEN)));
       collectItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,d", storedCoins.get(ResourceType.MATERIAL))+" ").formatted(Formatting.GOLD,Formatting.BOLD)).append(Text.translatable(ResourceType.MATERIAL.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.RED)));
       collectItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,d", storedCoins.get(ResourceType.RESEARCH))+" ").formatted(Formatting.AQUA,Formatting.BOLD)).append(Text.translatable(ResourceType.RESEARCH.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.DARK_AQUA)));
       collectItem.addLoreLine(Text.empty());
+      if(mailSize > 0){
+         collectItem.addLoreLine(Text.translatable("gui.nations.items_in_mail",Text.literal(""+mailSize).formatted(Formatting.LIGHT_PURPLE,Formatting.BOLD)).formatted(Formatting.BLUE));
+         collectItem.addLoreLine(Text.empty());
+      }
       collectItem.addLoreLine(Text.literal("")
             .append(Text.translatable("gui.nations.click").formatted(Formatting.LIGHT_PURPLE))
             .append(Text.translatable("gui.nations.nation_collect_sub").formatted(Formatting.DARK_PURPLE)));
@@ -399,7 +405,11 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
          ItemStack stack = inventory.getStack(0);
          if(!stack.isEmpty()){
             int count = stack.getCount();
-            nation.storeResearchCoins(count);
+            if(stack.getItem() instanceof ResourceBullionItem){
+               nation.storeResearchCoins(count*1000);
+            }else{
+               nation.storeResearchCoins(count);
+            }
             inventory.setStack(0,ItemStack.EMPTY);
             build();
          }

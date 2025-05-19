@@ -33,6 +33,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class CapturePoint {
    
@@ -44,7 +45,7 @@ public class CapturePoint {
    private int y;
    private int storedCoins;
    private long auctionStartTime;
-   private HashMap<String,Double> influence;
+   private HashMap<String,Double> influence = new HashMap<>();
    private ElementHolder hologram;
    private HolderAttachment attachment;
    private int interactCooldown = 0;
@@ -106,6 +107,10 @@ public class CapturePoint {
          if(server.getTicks() % 20 == 0){
             this.updateHolo = true;
          }
+         
+         if(server.getTicks() % 2400 == 0){
+            DynmapCalls.updateCapturePointMarker(this);
+         }
       }
    }
    
@@ -130,6 +135,11 @@ public class CapturePoint {
          int maxStackSize = getType().getCoin().getMaxCount();
          Vec3d spawnPos = getHologramPos().add(0,2,0);
          
+         while(sum > 1000){
+            sum -= 1000;
+            ItemStack newStack = new ItemStack(type.getBullion(),1);
+            ItemScatterer.spawn(world,spawnPos.x,spawnPos.y,spawnPos.z,newStack);
+         }
          while(sum > 0){
             int size = Math.min(sum,world.getRandom().nextBetween((int) Math.min(maxStackSize,storedCoins/32.0), maxStackSize+1));
             sum -= size;
@@ -160,6 +170,7 @@ public class CapturePoint {
       Nations.announce(announcement);
       auctionStartTime = 0;
       transferOwnership(serverWorld,winningNation);
+      this.updateHolo = true;
    }
    
    public void startAuction(){
@@ -170,23 +181,25 @@ public class CapturePoint {
             ).formatted(Formatting.DARK_AQUA);
       Nations.announce(announcement);
       auctionStartTime = System.currentTimeMillis();
+      DynmapCalls.updateCapturePointMarker(this);
    }
    
    public void addCoins(Nation nation, int coinCount){
-      if(auctionStartTime == 0){
-         startAuction();
-      }
       Pair<ChunkPos,Double> nearestInf = calculateNearestInfluence(nation);
       double coinToInfluence = Math.max(0.001,nearestInf.getRight());
       double curInfluence = influence.getOrDefault(nation.getId(),0.0);
       influence.put(nation.getId(),curInfluence+(coinCount*coinToInfluence));
+      if(auctionStartTime == 0){
+         startAuction();
+      }
    }
    
    private Nation getHighestInfluencingNation(){
-      return influence.entrySet().stream()
+      List<Nation> stream = influence.entrySet().stream()
             .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
             .map(e -> Nations.getNation(e.getKey()))
-            .filter(Objects::nonNull).toList().getFirst();
+            .filter(Objects::nonNull).toList();
+      return stream.isEmpty() ? null : stream.getFirst();
    }
    
    public Pair<ChunkPos,Double> calculateNearestInfluence(Nation nation){
@@ -408,7 +421,18 @@ public class CapturePoint {
    
    public String getMarkerLabel(){
       String controlled = controllingNationId == null ? "Uncontrolled" : Nations.getNation(controllingNationId).getName();
-      return Text.translatable(getType().getTranslation()).getString() + " Capture Point (Yield: "+yield+") - " + controlled;
+      if(auctionStartTime != 0){
+         Nation highestInfluencingNation = getHighestInfluencingNation();
+         long aucEnd = getAuctionEndTime();
+         long now = System.currentTimeMillis();
+         long tillEnd = aucEnd - now;
+         controlled = "Auctioning";
+         if(highestInfluencingNation != null){
+            controlled += " - "+highestInfluencingNation.getName();
+         }
+         controlled += " - "+MiscUtils.getTimeDiff(tillEnd).getString();
+      }
+      return Text.translatable(getType().getTranslation()).getString() +" Capture Point "+getChunkPos().toString()+" (Yield: "+yield+") - " + controlled;
    }
    
    public ResourceType getType(){

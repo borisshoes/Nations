@@ -4,6 +4,7 @@ import net.borisshoes.arcananovum.ArcanaRegistry;
 import net.borisshoes.arcananovum.damage.ArcanaDamageTypes;
 import net.borisshoes.arcananovum.utils.SpawnPile;
 import net.borisshoes.nations.Nations;
+import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.utils.GenericTimer;
 import net.borisshoes.nations.utils.ParticleEffectUtils;
@@ -11,6 +12,10 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -28,25 +33,73 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.TeleportTarget;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class WarManager {
    
    public static final int DUEL_RANGE = 2;
-   
-   private static boolean WAR_ACTIVE = false;
    private static final HashSet<Contest> ACTIVE_CONTESTS = new HashSet<>();
    private static final HashMap<CapturePoint,ServerPlayerEntity> PENDING_CONTESTS = new HashMap<>();
    private static final HashSet<CapturePoint> COMPLETED_CAPS = new HashSet<>();
    
+   private static long warStart = 0;
+   private static boolean warActive = false;
+   
+   public static NbtCompound saveWarData(NbtCompound compound){
+      NbtList completedCapList = new NbtList();
+      NbtCompound pendingContests = new NbtCompound();
+      completedCapList.addAll(COMPLETED_CAPS.stream().map(cap -> NbtString.of(cap.getId().toString())).collect(Collectors.toSet()));
+      PENDING_CONTESTS.forEach((cap, player) -> pendingContests.putString(cap.getId().toString(),player.getUuidAsString()));
+      
+      compound.putLong("warStart",warStart);
+      compound.putBoolean("warActive",warActive);
+      compound.put("completedCaps",completedCapList);
+      compound.put("pendingContests",pendingContests);
+      return compound;
+   }
+   
+   public static void loadWarData(NbtCompound compound){
+      PENDING_CONTESTS.clear();
+      COMPLETED_CAPS.clear();
+      NbtList completedCapList = compound.getList("completedCaps", NbtElement.STRING_TYPE);
+      NbtCompound pendingContests = compound.getCompound("pendingContests");
+      for(String key : pendingContests.getKeys()){
+         ServerPlayerEntity player = Nations.SERVER.getPlayerManager().getPlayer(UUID.fromString(pendingContests.getString(key)));
+         if(player != null) PENDING_CONTESTS.put(Nations.getCapturePoint(key),player);
+      }
+      for(NbtElement e : completedCapList){
+         COMPLETED_CAPS.add(Nations.getCapturePoint(e.asString()));
+      }
+      
+      warStart = compound.getLong("warStart");
+      warActive = compound.getBoolean("warActive");
+   }
+   
    public static void startWar(){
-      WAR_ACTIVE = true;
+      warStart = System.currentTimeMillis();
+      ACTIVE_CONTESTS.clear();
+      PENDING_CONTESTS.clear();
+      COMPLETED_CAPS.clear();
+   }
+   
+   public static void endWar(){
+      warActive = false;
       ACTIVE_CONTESTS.clear();
       PENDING_CONTESTS.clear();
       COMPLETED_CAPS.clear();
    }
    
    public static void tickWar(MinecraftServer server){
-      tickContests(server);
+      int warDuration = NationsConfig.getInt(NationsRegistry.WAR_DURATION_CFG);
+      long warEnd = warStart + 60000L * warDuration;
+      long now = System.currentTimeMillis();
+      if(now > warEnd && warActive){
+         endWar();
+      }
+      
+      if(warActive){
+         tickContests(server);
+      }
    }
    
    private static void tickContests(MinecraftServer server){
@@ -107,7 +160,7 @@ public class WarManager {
    }
    
    public static boolean isWarActive(){
-      return WAR_ACTIVE;
+      return warActive;
    }
    
    public static void startContest(MinecraftServer server, CapturePoint cap, ServerPlayerEntity attacker, ServerPlayerEntity defender){

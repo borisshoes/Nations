@@ -34,6 +34,8 @@ import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -83,6 +85,19 @@ public class ShopUtils {
          }else if(player == null && hologram != null){
             hologram.destroy();
             hologram = null;
+         }
+      }
+      if(serverWorld.getRandom().nextBetween(1,8000) == 1){
+         Vec3d pos = getHologramPos();
+         int dialog = serverWorld.getRandom().nextBetween(0,17);
+         for(ServerPlayerEntity player : serverWorld.getPlayers(p -> p.squaredDistanceTo(pos) < 400)){
+            player.sendMessage(Text.empty()
+                  .append(Text.literal(" ~ ").formatted(Formatting.BOLD,Formatting.DARK_AQUA))
+                  .append(Text.literal("Jeráld").formatted(Formatting.BOLD, Formatting.AQUA))
+                  .append(Text.literal(" ~ \n").formatted(Formatting.BOLD,Formatting.DARK_AQUA))
+                  .append(Text.translatable("text.nations.jerald_dialog_"+dialog).formatted(Formatting.DARK_AQUA))
+            );
+            player.playSoundToPlayer(SoundEvents.ENTITY_WANDERING_TRADER_TRADE, SoundCategory.PLAYERS, 1, 1);
          }
       }
    }
@@ -144,7 +159,7 @@ public class ShopUtils {
                float pitch = MathHelper.wrapDegrees((float)(-(MathHelper.atan2(e, g) * 180.0F / (float)Math.PI)));
                float yaw = MathHelper.wrapDegrees((float)(MathHelper.atan2(f, d) * 180.0F / (float)Math.PI) - 90.0F);
                
-               if(tickCount % 4 == 0){
+               if(tickCount % 2 == 0){
                   this.removeElement(jeraldEntity);
                   jeraldEntity = new SimpleEntityElement(EntityType.WANDERING_TRADER);
                   jeraldEntity.setOffset(new Vec3d(0,0.0,0));
@@ -184,6 +199,12 @@ public class ShopUtils {
       offers.add(new Pair<>(new ItemStack(NationsRegistry.MATERIAL_COIN_ITEM,1), new Pair<>(NationsRegistry.RESEARCH_COIN_ITEM,3)));
       offers.add(new Pair<>(new ItemStack(NationsRegistry.RESEARCH_COIN_ITEM,1), new Pair<>(NationsRegistry.MATERIAL_COIN_ITEM,3)));
       offers.add(new Pair<>(new ItemStack(NationsRegistry.RESEARCH_COIN_ITEM,1), new Pair<>(NationsRegistry.GROWTH_COIN_ITEM,3)));
+      offers.add(new Pair<>(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,1), new Pair<>(NationsRegistry.MATERIAL_BULLION_ITEM,3)));
+      offers.add(new Pair<>(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,1), new Pair<>(NationsRegistry.RESEARCH_BULLION_ITEM,3)));
+      offers.add(new Pair<>(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,1), new Pair<>(NationsRegistry.GROWTH_BULLION_ITEM,3)));
+      offers.add(new Pair<>(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,1), new Pair<>(NationsRegistry.RESEARCH_BULLION_ITEM,3)));
+      offers.add(new Pair<>(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,1), new Pair<>(NationsRegistry.MATERIAL_BULLION_ITEM,3)));
+      offers.add(new Pair<>(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,1), new Pair<>(NationsRegistry.GROWTH_BULLION_ITEM,3)));
       
       addBlockTagOffer(BlockTags.LOGS,99);
       
@@ -328,12 +349,23 @@ public class ShopUtils {
       addBlockTagOffer(BlockTags.FLOWERS,45);
       addBlockTagOffer(BlockTags.SMALL_FLOWERS,45);
       
-      offers.add(getNormalSell(Items.OBSIDIAN,1000));
-      offers.add(getNormalSell(Items.CRYING_OBSIDIAN,1500));
+      offers.add(getGrowthSell(Items.OBSIDIAN,500));
+      offers.add(getGrowthSell(Items.CRYING_OBSIDIAN,1000));
+      offers.add(new Pair<>(new ItemStack(Items.DRAGON_BREATH,4), new Pair<>(NationsRegistry.GROWTH_COIN_ITEM,100)));
+      offers.add(new Pair<>(new ItemStack(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE,1), new Pair<>(NationsRegistry.GROWTH_COIN_ITEM,2500)));
+      offers.add(new Pair<>(new ItemStack(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE,1), new Pair<>(NationsRegistry.RESEARCH_COIN_ITEM,2500)));
    }
    
    private Pair<ItemStack,Pair<Item,Integer>> getNormalSell(Item item, int price){
       return new Pair<>(new ItemStack(item,item.getMaxCount()), new Pair<>(NationsRegistry.MATERIAL_COIN_ITEM,price));
+   }
+   
+   private Pair<ItemStack,Pair<Item,Integer>> getGrowthSell(Item item, int price){
+      return new Pair<>(new ItemStack(item,item.getMaxCount()), new Pair<>(NationsRegistry.GROWTH_COIN_ITEM,price));
+   }
+   
+   private Pair<ItemStack,Pair<Item,Integer>> getResearchSell(Item item, int price){
+      return new Pair<>(new ItemStack(item,item.getMaxCount()), new Pair<>(NationsRegistry.RESEARCH_COIN_ITEM,price));
    }
    
    private void addItemTagOffer(TagKey<Item> tag, int price){
@@ -394,7 +426,7 @@ public class ShopUtils {
             }
             
             Item buyItem = Registries.ITEM.get(Identifier.of(itemId));
-            if(buyItem == null || buyItem.getMaxCount() < amount || amount < 1){
+            if(buyItem == null || amount < 0){
                logger.warn("Skipping shop line with invalid buy item or count: {}", line);
                continue;
             }

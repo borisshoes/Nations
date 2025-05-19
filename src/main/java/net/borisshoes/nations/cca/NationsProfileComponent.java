@@ -21,6 +21,8 @@ public class NationsProfileComponent implements INationsProfileComponent{
    private BlockPos riftReturnPos = null;
    private long lastOnline;
    private long lastLoginBonus;
+   private String lastTerritory = "";
+   private int titleCooldown = 0;
    
    public NationsProfileComponent(PlayerEntity player){
       this.player = player;
@@ -34,6 +36,8 @@ public class NationsProfileComponent implements INationsProfileComponent{
       bypassClaims = nbtCompound.getBoolean("bypassClaims");
       lastOnline = nbtCompound.getLong("lastOnline");
       lastLoginBonus = nbtCompound.getLong("lastLoginBonus");
+      lastTerritory = nbtCompound.getString("lastTerritory");
+      titleCooldown = nbtCompound.getInt("titleCooldown");
       
       if(nbtCompound.contains("riftReturnPos")){
          NbtCompound riftPos = nbtCompound.getCompound("riftReturnPos");
@@ -49,6 +53,8 @@ public class NationsProfileComponent implements INationsProfileComponent{
       nbtCompound.putBoolean("bypassClaims",bypassClaims);
       nbtCompound.putLong("lastOnline",lastOnline);
       nbtCompound.putLong("lastLoginBonus",lastLoginBonus);
+      nbtCompound.putString("lastTerritory",lastTerritory);
+      nbtCompound.putInt("titleCooldown",titleCooldown);
       
       if(riftReturnPos != null){
          NbtCompound riftPos = new NbtCompound();
@@ -131,6 +137,33 @@ public class NationsProfileComponent implements INationsProfileComponent{
    @Override
    public void setLastLoginBonus(long lastLoginBonus){
       this.lastLoginBonus = lastLoginBonus;
+   }
+   
+   @Override
+   public String lastTerritory(){
+      return lastTerritory;
+   }
+   
+   @Override
+   public int titleCooldown(){
+      return titleCooldown;
+   }
+   
+   @Override
+   public void setLastTerritory(String lastTerritory){
+      this.lastTerritory = lastTerritory;
+   }
+   
+   @Override
+   public void resetTitleCooldown(){
+      this.titleCooldown = 20;
+   }
+   
+   @Override
+   public void tick(){
+      if(this.titleCooldown > 0){
+         titleCooldown--;
+      }
    }
    
    public void addPlayerTeam(MinecraftServer server){

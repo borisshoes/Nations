@@ -11,6 +11,7 @@ import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.gameplay.ResourceType;
 import net.borisshoes.nations.gui.core.GuiHelper;
 import net.borisshoes.nations.items.GraphicalItem;
+import net.borisshoes.nations.items.ResourceBullionItem;
 import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.NationsColors;
 import net.minecraft.component.DataComponentTypes;
@@ -291,7 +292,11 @@ public class CapturePointGui extends SimpleGui implements InventoryChangedListen
          ItemStack stack = inv.getStack(0);
          if(!stack.isEmpty()){
             int count = stack.getCount();
-            capturePoint.addCoins(playerNation,count);
+            if(stack.getItem() instanceof ResourceBullionItem){
+               capturePoint.addCoins(playerNation,count*1000);
+            }else{
+               capturePoint.addCoins(playerNation,count);
+            }
             inv.setStack(0,ItemStack.EMPTY);
             build();
          }

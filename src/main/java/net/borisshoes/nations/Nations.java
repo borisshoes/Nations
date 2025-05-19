@@ -54,6 +54,7 @@ public class Nations implements ModInitializer {
    private static final String SHOP_NAME = "NationsShop.txt";
    public static final String MOD_ID = "nations";
    public static final String BLANK_UUID = "00000000-0000-4000-8000-000000000000";
+   public static final String JERALD_UUID = "5de15dee-0e50-4440-a19e-1a44da3f79dd";
    public static final Identifier EventPhase = Identifier.of(MOD_ID, "events");
    public static final HashMap<ResourceType, StructurePlacer.Structure> CAPTURE_POINT_STRUCTURES = new HashMap<>();
    public static StructurePlacer.Structure NATION_STRUCTURE;
@@ -96,7 +97,7 @@ public class Nations implements ModInitializer {
       SHOP = new ShopUtils(FabricLoader.getInstance().getConfigDir().resolve(SHOP_NAME).toFile(),LOGGER,server);
       
       for(ResourceType value : ResourceType.values()){
-         CAPTURE_POINT_STRUCTURES.put(value,StructurePlacer.loadFromFile(MOD_ID,value.name()+"_capture_point"));
+         CAPTURE_POINT_STRUCTURES.put(value,StructurePlacer.loadFromFile(MOD_ID,value.name().toLowerCase(Locale.ROOT)+"_capture_point"));
       }
       Nations.NATION_STRUCTURE = StructurePlacer.loadFromFile(MOD_ID,"nation_center");
       
@@ -215,8 +216,7 @@ public class Nations implements ModInitializer {
    }
    
    public static boolean isWartime(){
-      // TODO
-      return false;
+      return WarManager.isWarActive();
    }
    
    public static void announce(MutableText text){
