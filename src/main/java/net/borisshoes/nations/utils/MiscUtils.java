@@ -75,45 +75,36 @@ public class MiscUtils {
       Item resourceCoinItem = coinType.getCoin();
       Item resourceBullionItem = coinType.getBullion();
       PlayerInventory inv = player.getInventory();
-      int totalCoins = 0, totalBullions = 0;
       
+      int totalCoins   = 0;
+      int totalBullions = 0;
       for (int i = 0; i < inv.size(); i++) {
          ItemStack stack = inv.getStack(i);
          if (stack.isEmpty()) continue;
-         if (stack.getItem() instanceof ResourceCoinItem coinItem && coinItem.getType() == coinType) {
+         if (stack.getItem() instanceof ResourceCoinItem ci && ci.getType() == coinType) {
             totalCoins += stack.getCount();
-         }else if (stack.getItem() instanceof ResourceBullionItem bullionItem && bullionItem.getType() == coinType) {
+         } else if (stack.getItem() instanceof ResourceBullionItem bi && bi.getType() == coinType) {
             totalBullions += stack.getCount();
          }
       }
       
-      long totalValue = totalCoins + (long)totalBullions * 1000;
-      if (totalValue < amount) {
-         return false;
-      }
-      
-
-      int bullionsToUse = Math.min(amount / 1000, totalBullions);
-      int remainder = amount - bullionsToUse * 1000;
+      long totalValue = totalCoins + (long) totalBullions * 1000L;
+      if (totalValue < amount) return false;
       int coinsToUse;
+      int bullionsToUse;
       int leftoverChange = 0;
       
-      if (remainder > 0) {
-         int coinStacksNeeded = (remainder + resourceCoinItem.getMaxCount()-1) / resourceCoinItem.getMaxCount();
-         if (bullionsToUse < totalBullions && coinStacksNeeded > 1) {
-            bullionsToUse++;
-            leftoverChange = bullionsToUse * 1000 - amount;
-            coinsToUse = 0;
-         } else {
-            coinsToUse = remainder;
-         }
+      if (totalCoins >= amount) {
+         coinsToUse = amount;
+         bullionsToUse = 0;
       } else {
-         coinsToUse = 0;
+         coinsToUse = totalCoins;
+         long remaining = amount - totalCoins;
+         bullionsToUse = (int) ((remaining + 999L) / 1000L);
+         leftoverChange = (int) (bullionsToUse * 1000L - remaining);
       }
       
-      Map<ItemStack,Integer> bullionRemovals = new LinkedHashMap<>();
-      Map<ItemStack,Integer> coinRemovals    = new LinkedHashMap<>();
-      
+      Map<ItemStack, Integer> bullionRemovals = new LinkedHashMap<>();
       int needB = bullionsToUse;
       for (int i = 0; i < inv.size() && needB > 0; i++) {
          ItemStack stack = inv.getStack(i);
@@ -131,7 +122,9 @@ public class MiscUtils {
             coinStacks.add(stack);
          }
       }
-      coinStacks.sort((a, b) -> Integer.compare(b.getCount(), a.getCount()));
+      coinStacks.sort(Comparator.comparingInt(ItemStack::getCount));
+      
+      Map<ItemStack, Integer> coinRemovals = new LinkedHashMap<>();
       int needC = coinsToUse;
       for (ItemStack stack : coinStacks) {
          if (needC <= 0) break;
@@ -143,32 +136,32 @@ public class MiscUtils {
       for (var e : bullionRemovals.entrySet()) {
          ItemStack stack = e.getKey();
          int toRemove = e.getValue();
-         if(stack.getCount() == toRemove){
+         if (stack.getCount() == toRemove) {
             inv.removeOne(stack);
-         }else{
-            stack.setCount(stack.getCount()-toRemove);
+         } else {
+            stack.setCount(stack.getCount() - toRemove);
          }
       }
       for (var e : coinRemovals.entrySet()) {
          ItemStack stack = e.getKey();
          int toRemove = e.getValue();
-         if(stack.getCount() == toRemove){
+         if (stack.getCount() == toRemove) {
             inv.removeOne(stack);
-         }else{
-            stack.setCount(stack.getCount()-toRemove);
+         } else {
+            stack.setCount(stack.getCount() - toRemove);
          }
       }
       
       if (leftoverChange > 0) {
-         ItemStack[] stackList = new ItemStack[(leftoverChange + resourceCoinItem.getMaxCount()-1) / resourceCoinItem.getMaxCount()];
-         int i = 0;
-         while (leftoverChange > 0) {
-            int give = Math.min(leftoverChange, resourceCoinItem.getMaxCount());
-            leftoverChange -= give;
-            stackList[i] = new ItemStack(resourceCoinItem, give);
-            i++;
+         int maxStack = resourceCoinItem.getMaxCount();
+         List<ItemStack> changeStacks = new ArrayList<>();
+         int left = leftoverChange;
+         while (left > 0) {
+            int give = Math.min(left, maxStack);
+            changeStacks.add(new ItemStack(resourceCoinItem, give));
+            left -= give;
          }
-         MiscUtils.returnItems(new SimpleInventory(stackList),player);
+         MiscUtils.returnItems(new SimpleInventory(changeStacks.toArray(new ItemStack[0])), player);
       }
       
       return true;

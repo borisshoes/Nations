@@ -184,6 +184,11 @@ public class CapturePoint {
       DynmapCalls.updateCapturePointMarker(this);
    }
    
+   public void cancelAuction(){
+      auctionStartTime = 0;
+      this.updateHolo = true;
+   }
+   
    public void addCoins(Nation nation, int coinCount){
       Pair<ChunkPos,Double> nearestInf = calculateNearestInfluence(nation);
       double coinToInfluence = Math.max(0.001,nearestInf.getRight());
@@ -412,6 +417,7 @@ public class CapturePoint {
          }
       }
       
+      this.updateHolo = true;
       DynmapCalls.updateCapturePointMarker(this);
    }
    

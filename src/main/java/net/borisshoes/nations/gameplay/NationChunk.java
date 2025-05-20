@@ -3,6 +3,9 @@ package net.borisshoes.nations.gameplay;
 import net.borisshoes.nations.Nations;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtString;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.ChunkPos;
 
 import static net.borisshoes.nations.Nations.log;
@@ -69,6 +72,19 @@ public class NationChunk {
       Nation newNation = Nations.getNation(controllingNationId);
       if(newNation != null){
          newNation.getChunks().add(this);
+         
+         CapturePoint capturePoint = Nations.getCapturePoint(getPos());
+         if(capturePoint != null){
+            capturePoint.transferOwnership(Nations.SERVER.getOverworld(),newNation);
+            capturePoint.cancelAuction();
+            MutableText announcement = Text.translatable("text.nations.cap_annex",
+                  capturePoint.getType().getText().formatted(Formatting.BOLD),
+                  Text.translatable("text.nations.capture_point").formatted(Formatting.BOLD,capturePoint.getType().getTextColor()),
+                  Text.literal(capturePoint.getChunkPos().toString()).formatted(Formatting.YELLOW,Formatting.BOLD),
+                  newNation.getFormattedName().formatted(Formatting.BOLD)
+            ).formatted(Formatting.DARK_AQUA);
+            Nations.announce(announcement);
+         }
       }
    }
    

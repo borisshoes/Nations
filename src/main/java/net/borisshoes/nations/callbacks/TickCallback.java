@@ -6,6 +6,7 @@ import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.cca.INationsDataComponent;
 import net.borisshoes.nations.cca.INationsProfileComponent;
+import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.gameplay.NationChunk;
 import net.borisshoes.nations.gameplay.TimedEvents;
 import net.borisshoes.nations.gameplay.WarManager;
@@ -140,10 +141,11 @@ public class TickCallback {
                NationChunk nationChunk = Nations.getChunk(new ChunkPos(pos));
                String lastTerritory = profile.lastTerritory();
                String territory = "";
+               Nation nation = null;
                if(NationsLand.isSpawnChunk(pos)){
                   territory = ".spawn";
-               }else if(nationChunk != null && nationChunk.getControllingNation() != null){
-                  territory = nationChunk.getControllingNation().getId();
+               }else if(nationChunk != null && (nation = nationChunk.getControllingNation()) != null){
+                  territory = nation.getId();
                }
                
                if(!territory.equals(lastTerritory)){
@@ -153,12 +155,16 @@ public class TickCallback {
                      if(territory.equals(".spawn")){
                         titleText = Text.translatable("text.nations.spawn").formatted(Formatting.DARK_AQUA);
                      }else if(!territory.isBlank()){
-                        titleText = nationChunk.getControllingNation().getFormattedNameTag(false);
+                        titleText = nation.getFormattedNameTag(false);
                      }
                      if(titleText != null){
                         player.networkHandler.sendPacket(new TitleFadeS2CPacket(10, 20, 10));
                         player.networkHandler.sendPacket(new TitleS2CPacket(titleText));
                         profile.resetTitleCooldown();
+                        
+                        if(nation != null && !nation.equals(profile.getNation())){
+                           nation.alertTrespass(player);
+                        }
                      }
                   }
                   profile.setLastTerritory(territory);

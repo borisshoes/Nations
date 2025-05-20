@@ -1,7 +1,9 @@
 package net.borisshoes.nations.items;
 
 import eu.pb4.polymer.core.api.item.PolymerItem;
+import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.gameplay.ResourceType;
+import net.borisshoes.nations.utils.GenericTimer;
 import net.borisshoes.nations.utils.MiscUtils;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.DamageResistantComponent;
@@ -21,6 +23,9 @@ import net.minecraft.util.Rarity;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static net.borisshoes.nations.Nations.MOD_ID;
 
@@ -44,16 +49,11 @@ public class ResourceBullionItem  extends Item implements PolymerItem {
    public ActionResult use(World world, PlayerEntity user, Hand hand){
       if(!user.isSneaking()) return super.use(world, user, hand);
       user.getItemCooldownManager().set(user.getStackInHand(hand),20);
-      int remaining = 1000;
-      ItemStack[] stackList = new ItemStack[(remaining + getType().getCoin().getMaxCount()-1) / getType().getCoin().getMaxCount()];
-      int i = 0;
-      while (remaining > 0) {
-         int give = Math.min(remaining, getType().getCoin().getMaxCount());
-         remaining -= give;
-         stackList[i] = new ItemStack(getType().getCoin(), give);
-         i++;
-      }
-      MiscUtils.returnItems(new SimpleInventory(stackList),user);
+      user.getStackInHand(hand).decrement(1);
+      List<ItemStack> change = new ArrayList<>();
+      for (int rem = 1000, max = getType().getCoin().getMaxCount(); rem > 0; rem -= Math.min(rem, max))
+         change.add(new ItemStack(getType().getCoin(), Math.min(rem, max)));
+      Nations.addTickTimerCallback(new GenericTimer(1, () -> MiscUtils.returnItems(new SimpleInventory(change.toArray(new ItemStack[0])), user)));
       return ActionResult.SUCCESS;
    }
    

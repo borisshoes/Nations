@@ -17,6 +17,7 @@ public interface INationsProfileComponent extends ComponentV3 {
    String lastTerritory();
    int titleCooldown();
    void resetTitleCooldown();
+   boolean trespassAlerts();
    
    void setNation(Nation nation);
    void setClaimBypass(boolean bypass);
@@ -29,4 +30,5 @@ public interface INationsProfileComponent extends ComponentV3 {
    void setLastLoginBonus(long time);
    void setLastTerritory(String lastTerritory);
    void tick();
+   void toggleTrespassAlerts();
 }

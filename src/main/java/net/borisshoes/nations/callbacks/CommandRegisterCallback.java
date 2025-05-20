@@ -99,6 +99,10 @@ public class CommandRegisterCallback {
             .then(literal("getNextWar").requires(source -> source.hasPermissionLevel(2)).executes(NationsCommands::getNextWar))
       );
       
+      dispatcher.register(literal("lc").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.LOCAL)));
+      dispatcher.register(literal("gc").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.GLOBAL)));
+      dispatcher.register(literal("nc").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.NATION)));
+      
       dispatcher.register(literal("nation")
             .then(literal("survey").executes(NationsCommands::nationSurvey))
             .then(literal("settle").executes(NationsCommands::nationSettle))
@@ -121,6 +125,8 @@ public class CommandRegisterCallback {
                   .executes(NationsCommands::researchStatus))
             .then(literal("leaderboard")
                   .executes(NationsCommands::leaderboard))
+            .then(literal("toggleTrespassAlerts")
+                  .executes(NationsCommands::toggleTrespassAlerts))
       );
       
       dispatcher.register(Nations.CONFIG.generateCommand());

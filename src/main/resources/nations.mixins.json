@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "AbstractBlockStateMixin",
+    "AnvilScreenHandlerMixin",
     "AquaticEversourceMixin",
     "ArcanaForgeRequirementMixin",
     "ArcanaProfileMixin",
@@ -27,6 +28,7 @@
     "FireBlockMixin",
     "FishingBobberEntityMixin",
     "FlowableFluidMixin",
+    "ForgingScreenHandlerAccessor",
     "ItemStackMixin",
     "LecternBlockEntityAccessor",
     "LightCharmMixin",

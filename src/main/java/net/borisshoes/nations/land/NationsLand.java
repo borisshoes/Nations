@@ -617,7 +617,9 @@ public class NationsLand {
    }
    
    public static boolean shouldKeepInventory(RegistryKey<World> world, ChunkPos chunkPos, ServerPlayerEntity player){
-      if(isWartime() || !world.equals(ServerWorld.OVERWORLD)) return false;
+      if(!world.equals(ServerWorld.OVERWORLD)) return false;
+      if(isSpawnChunk(chunkPos.getBlockPos(0,0,0))) return true;
+      if(isWartime()) return false;
       Nation nation = Nations.getNation(player);
       if(nation == null) return false;
       NationChunk nationChunk = Nations.getChunk(chunkPos);

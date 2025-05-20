@@ -23,6 +23,7 @@ public class NationsProfileComponent implements INationsProfileComponent{
    private long lastLoginBonus;
    private String lastTerritory = "";
    private int titleCooldown = 0;
+   private boolean trespassAlerts = true;
    
    public NationsProfileComponent(PlayerEntity player){
       this.player = player;
@@ -34,6 +35,7 @@ public class NationsProfileComponent implements INationsProfileComponent{
       channel = ChatChannel.byName(nbtCompound.getString("channel"),ChatChannel.GLOBAL);
       nickname = nbtCompound.getString("nickname");
       bypassClaims = nbtCompound.getBoolean("bypassClaims");
+      trespassAlerts = nbtCompound.getBoolean("trespassAlerts");
       lastOnline = nbtCompound.getLong("lastOnline");
       lastLoginBonus = nbtCompound.getLong("lastLoginBonus");
       lastTerritory = nbtCompound.getString("lastTerritory");
@@ -51,6 +53,7 @@ public class NationsProfileComponent implements INationsProfileComponent{
       nbtCompound.putString("channel", channel.asString());
       nbtCompound.putString("nickname", nickname);
       nbtCompound.putBoolean("bypassClaims",bypassClaims);
+      nbtCompound.putBoolean("trespassAlerts",trespassAlerts);
       nbtCompound.putLong("lastOnline",lastOnline);
       nbtCompound.putLong("lastLoginBonus",lastLoginBonus);
       nbtCompound.putString("lastTerritory",lastTerritory);
@@ -132,6 +135,16 @@ public class NationsProfileComponent implements INationsProfileComponent{
    @Override
    public long lastLoginBonus(){
       return this.lastLoginBonus;
+   }
+   
+   @Override
+   public boolean trespassAlerts(){
+      return trespassAlerts;
+   }
+   
+   @Override
+   public void toggleTrespassAlerts(){
+      this.trespassAlerts = !trespassAlerts;
    }
    
    @Override

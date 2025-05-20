@@ -24,6 +24,7 @@ import net.minecraft.inventory.InventoryChangedListener;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.screen.AnvilScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -174,10 +175,29 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
       
       GuiElementBuilder collectItem = new GuiElementBuilder(NationsRegistry.GROWTH_COIN_ITEM).hideDefaultTooltip();
       Map<ResourceType,Integer> storedCoins = nation.getStoredCoins();
+      Map<ResourceType,Integer> dailyYield = nation.calculateCoinYield(Nations.SERVER.getOverworld());
       collectItem.setName(Text.translatable(mailSize > 0 ? "gui.nations.nation_collect_with_mail" : "gui.nations.nation_collect_title").formatted(Formatting.YELLOW,Formatting.BOLD));
-      collectItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,d", storedCoins.get(ResourceType.GROWTH))+" ").formatted(Formatting.GREEN,Formatting.BOLD)).append(Text.translatable(ResourceType.GROWTH.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.DARK_GREEN)));
-      collectItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,d", storedCoins.get(ResourceType.MATERIAL))+" ").formatted(Formatting.GOLD,Formatting.BOLD)).append(Text.translatable(ResourceType.MATERIAL.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.RED)));
-      collectItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,d", storedCoins.get(ResourceType.RESEARCH))+" ").formatted(Formatting.AQUA,Formatting.BOLD)).append(Text.translatable(ResourceType.RESEARCH.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.DARK_AQUA)));
+      collectItem.addLoreLine(Text.translatable("gui.nations.nation_yield",
+            Text.literal(String.format("%,d", storedCoins.get(ResourceType.GROWTH))).formatted(Formatting.GREEN,Formatting.BOLD),
+            Text.translatable(ResourceType.GROWTH.getTranslation()).formatted(Formatting.DARK_GREEN),
+            Text.translatable("text.nations.coins").formatted(Formatting.DARK_GREEN),
+            Text.literal(String.format("%,d", dailyYield.get(ResourceType.GROWTH))).formatted(Formatting.GREEN,Formatting.BOLD)
+      ).formatted(Formatting.DARK_GREEN));
+      
+      collectItem.addLoreLine(Text.translatable("gui.nations.nation_yield",
+            Text.literal(String.format("%,d", storedCoins.get(ResourceType.MATERIAL))).formatted(Formatting.GOLD,Formatting.BOLD),
+            Text.translatable(ResourceType.MATERIAL.getTranslation()).formatted(Formatting.RED),
+            Text.translatable("text.nations.coins").formatted(Formatting.RED),
+            Text.literal(String.format("%,d", dailyYield.get(ResourceType.MATERIAL))).formatted(Formatting.GOLD,Formatting.BOLD)
+      ).formatted(Formatting.RED));
+      
+      collectItem.addLoreLine(Text.translatable("gui.nations.nation_yield",
+            Text.literal(String.format("%,d", storedCoins.get(ResourceType.RESEARCH))).formatted(Formatting.AQUA,Formatting.BOLD),
+            Text.translatable(ResourceType.RESEARCH.getTranslation()).formatted(Formatting.DARK_AQUA),
+            Text.translatable("text.nations.coins").formatted(Formatting.DARK_AQUA),
+            Text.literal(String.format("%,d", dailyYield.get(ResourceType.RESEARCH))).formatted(Formatting.AQUA,Formatting.BOLD)
+      ).formatted(Formatting.DARK_AQUA));
+
       collectItem.addLoreLine(Text.empty());
       if(mailSize > 0){
          collectItem.addLoreLine(Text.translatable("gui.nations.items_in_mail",Text.literal(""+mailSize).formatted(Formatting.LIGHT_PURPLE,Formatting.BOLD)).formatted(Formatting.BLUE));

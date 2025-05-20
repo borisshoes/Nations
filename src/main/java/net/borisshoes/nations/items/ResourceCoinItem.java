@@ -1,7 +1,9 @@
 package net.borisshoes.nations.items;
 
 import eu.pb4.polymer.core.api.item.PolymerItem;
+import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.gameplay.ResourceType;
+import net.borisshoes.nations.utils.GenericTimer;
 import net.borisshoes.nations.utils.MiscUtils;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.DamageResistantComponent;
@@ -16,13 +18,14 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Rarity;
+import net.minecraft.util.*;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 import static net.borisshoes.nations.Nations.MOD_ID;
 
@@ -44,31 +47,32 @@ public class ResourceCoinItem extends Item implements PolymerItem {
    
    @Override
    public ActionResult use(World world, PlayerEntity user, Hand hand){
-      if(!user.isSneaking()) return super.use(world, user, hand);
-      
-      int remaining = 1000;
+      if(!user.isSneaking()) return super.use(world,user,hand);
       PlayerInventory inv = user.getInventory();
-      int[] slots = new int[inv.size()];
-      for(int i = 0; i < inv.size() && remaining > 0; i++){
-         ItemStack stack = inv.getStack(i);
-         int stackCount = stack.getCount();
-         if(stack.isOf(this)){
-            if(remaining < stackCount){
-               slots[i] = remaining;
-               remaining = 0;
-            }else{
-               slots[i] = stackCount;
-               remaining -= stackCount;
-            }
+      Item coin = getType().getCoin();
+      List<Pair<Integer,ItemStack>> sortedStacks = new ArrayList<>();
+      
+      int need = 1000;
+      int found = 0;
+      for(int i = 0 ; i < inv.size(); i++){
+         if(inv.getStack(i).isOf(coin)){
+            sortedStacks.add(new Pair<>(i,inv.getStack(i)));
+            found += inv.getStack(i).getCount();
          }
       }
-      if(remaining > 0) return super.use(world, user, hand);
-      user.getItemCooldownManager().set(user.getStackInHand(hand),20);
-      for(int i = 0; i < slots.length; i++){
-         if(slots[i] <= 0) continue;
-         inv.removeStack(i,slots[i]);
+      sortedStacks.sort(Comparator.comparingInt(p -> p.getRight().getCount()));
+      if(found < need) return super.use(world,user,hand);
+      user.getItemCooldownManager().set(user.getStackInHand(hand), 20);
+      
+      for(Pair<Integer,ItemStack> pair : sortedStacks){
+         ItemStack stack = pair.getRight();
+         int take = Math.min(stack.getCount(), need);
+         inv.removeStack(pair.getLeft(), take);
+         need -= take;
+         if(need <= 0) break;
       }
-      MiscUtils.returnItems(new SimpleInventory(new ItemStack(getType().getBullion(),1)),user);
+      
+      Nations.addTickTimerCallback(new GenericTimer(1, () -> MiscUtils.returnItems(new SimpleInventory(new ItemStack(getType().getBullion(), 1)), user)));
       return ActionResult.SUCCESS;
    }
    

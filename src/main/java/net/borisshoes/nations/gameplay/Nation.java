@@ -14,6 +14,7 @@ import net.borisshoes.arcananovum.core.ArcanaItem;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
+import net.borisshoes.nations.cca.INationsProfileComponent;
 import net.borisshoes.nations.gui.NationGui;
 import net.borisshoes.nations.integration.DynmapCalls;
 import net.borisshoes.nations.items.GraphicalItem;
@@ -222,7 +223,7 @@ public class Nation {
       }
    }
    
-   private Map<ResourceType,Integer> calculateCoinYield(ServerWorld serverWorld){
+   public Map<ResourceType,Integer> calculateCoinYield(ServerWorld serverWorld){
       HashMap<ResourceType,Integer> coins = new HashMap<>();
       for(ResourceType value : ResourceType.values()){
          coins.put(value,0);
@@ -279,6 +280,17 @@ public class Nation {
       mailbox.clear();
       
       this.updateHolo = true;
+   }
+   
+   public void alertTrespass(ServerPlayerEntity player){
+      boolean allow = NationsConfig.getBoolean(NationsRegistry.TRESPASS_ALERTS_CFG);
+      if(!allow) return;
+      for(ServerPlayerEntity onlinePlayer : getOnlinePlayers()){
+         INationsProfileComponent profile = Nations.getPlayer(onlinePlayer);
+         if(profile.trespassAlerts()){
+            onlinePlayer.sendMessage(Text.translatable("text.nations.trespass_alert",player.getStyledDisplayName()).formatted(Formatting.RED));
+         }
+      }
    }
    
    private void openNationGUI(ServerPlayerEntity player){
@@ -849,16 +861,23 @@ public class Nation {
    public void onTechComplete(ResearchTech tech){
       MutableText announceText = Text.translatable("text.nations.finish_tech_announcement",
             getFormattedNameTag(false),
-            tech.getName().withColor(getTextColor())
+            NationsColors.withColor(tech.getName(),getTextColor())
       ).withColor(getTextColorSub());
       Nations.announce(announceText);
       
       techQueue.removeIf(iterTech -> iterTech.equals(tech));
       
       addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_RESEARCH_CFG));
-      long count = Nations.getNations().stream().filter(nation -> nation.hasCompletedTech(tech.getKey())).count();
-      if(count == 1){
-         addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_RESEARCH_BONUS_CFG));
+      if(TECH_TRACKER.containsKey(this)){
+         boolean found = TECH_TRACKER.entrySet().stream().anyMatch(entry -> entry.getValue().stream().anyMatch(key -> tech.getKey().equals(key)));
+         if(!found){
+            addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_RESEARCH_BONUS_CFG));
+         }
+      }else{
+         long count = Nations.getNations().stream().filter(nation -> nation.hasCompletedTech(tech.getKey())).count();
+         if(count == 1){
+            addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_RESEARCH_BONUS_CFG));
+         }
       }
       
       for(ServerPlayerEntity player : getOnlinePlayers()){

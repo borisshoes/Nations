@@ -4,6 +4,7 @@ import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.cca.INationsDataComponent;
+import net.borisshoes.nations.research.ResearchTech;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
@@ -12,7 +13,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.stream.Collectors;
 
+import static net.borisshoes.nations.Nations.TECH_TRACKER;
 import static net.borisshoes.nations.cca.WorldDataComponentInitializer.NATIONS_DATA;
 
 public class TimedEvents {
@@ -70,13 +73,19 @@ public class TimedEvents {
    }
    
    public static void doDailyTick(MinecraftServer server){
+      TECH_TRACKER.clear();
+      Nations.getNations().forEach(nation -> TECH_TRACKER.put(nation,nation.getCompletedTechs().stream().map(ResearchTech::getKey).collect(Collectors.toSet())));
       Nations.getCapturePoints().forEach(cap -> cap.dailyTick(server.getOverworld()));
       Nations.getNations().forEach(nation -> nation.dailyTick(server.getOverworld()));
+      TECH_TRACKER.clear();
    }
    
    public static void doHourlyTick(MinecraftServer server){
+      TECH_TRACKER.clear();
+      Nations.getNations().forEach(nation -> TECH_TRACKER.put(nation,nation.getCompletedTechs().stream().map(ResearchTech::getKey).collect(Collectors.toSet())));
       Nations.getCapturePoints().forEach(cap -> cap.hourlyTick(server.getOverworld()));
       Nations.getNations().forEach(nation -> nation.hourlyTick(server.getOverworld()));
+      TECH_TRACKER.clear();
    }
    
    private static void startWar(MinecraftServer server){

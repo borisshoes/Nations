@@ -228,6 +228,9 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> STACK_OVERDAMAGE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("stackOverdamageAmount", 5, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
+   public static final NationsConfig.ConfigSetting<?> TRESPASS_ALERTS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.BooleanConfigValue("trespassAlerts", true)));
+   
    // Biome Coin Configs
    
    public static final NationsConfig.ConfigSetting<?> BIOME_COINS_THE_VOID_CFG = registerConfigSetting(new NationsConfig.BiomeConfigSetting<>(
