@@ -51,7 +51,7 @@ public class ChunkGui extends SimpleGui {
       }
       Nation nation = nationChunk.getControllingNation();
       ServerWorld world = player.getServer().getOverworld();
-      boolean executor = playerNation != null && playerNation.hasPermissions(player) && NationsLand.unclaimedOrSameNation(pos,playerNation);
+      boolean executor = (playerNation != null && playerNation.hasPermissions(player) && NationsLand.unclaimedOrSameNation(pos,playerNation)) || Nations.getPlayer(player).bypassesClaims();
       if(!executor || type != ClickType.MOUSE_LEFT) return true;
       boolean claimed = nationChunk.isClaimed();
       int farmLvl = nationChunk.getFarmlandLvl();
@@ -115,9 +115,15 @@ public class ChunkGui extends SimpleGui {
          }else{
             player.sendMessage(Text.translatable("text.nations.not_enough_growth_coins").formatted(Formatting.RED,Formatting.ITALIC));
          }
-      }else if(index == 4 && cap != null && cap.getControllingNation() != null && cap.getControllingNation().equals(playerNation) && nationChunk.getControllingNation() == null){ // Transfer capture point
-         TransferCapturePointGui newGui = new TransferCapturePointGui(player, cap.getControllingNation(), cap);
-         newGui.open();
+      }else if(index == 4){
+         if(cap != null && cap.getControllingNation() != null && cap.getControllingNation().equals(playerNation) && nationChunk.getControllingNation() == null){ // Transfer capture point
+            TransferCapturePointGui newGui = new TransferCapturePointGui(player, cap.getControllingNation(), cap);
+            newGui.open();
+         }else if(cap == null && player.isCreativeLevelTwoOp()){
+            nationChunk.setArena(!nationChunk.isArena());
+            player.playSoundToPlayer(SoundEvents.BLOCK_NOTE_BLOCK_PLING.value(), SoundCategory.MASTER,1,!nationChunk.isArena() ? 0.5f : 1.5f);
+            build();
+         }
       }
       
       return true;
@@ -132,7 +138,7 @@ public class ChunkGui extends SimpleGui {
       }
       Nation nation = nationChunk.getControllingNation();
       ServerWorld world = player.getServer().getOverworld();
-      boolean executor = playerNation != null && NationsLand.unclaimedOrSameNation(pos,playerNation) && playerNation.hasPermissions(player);
+      boolean executor = (playerNation != null && NationsLand.unclaimedOrSameNation(pos,playerNation) && playerNation.hasPermissions(player)) || !Nations.getPlayer(player).bypassesClaims();
       
       GuiElementBuilder empty = GuiElementBuilder.from(GraphicalItem.withColor(GraphicalItem.GraphicItems.PAGE_BG, NationsColors.DARK_COLOR)).hideTooltip();
       for(int i = 0; i < size; i++){
@@ -274,7 +280,27 @@ public class ChunkGui extends SimpleGui {
          }else{
             nationItem.addLoreLine(Text.translatable("text.nations.chunk_influenced_by",nation.getFormattedName()).withColor(nation.getTextColorSub()));
          }
+         if(player.isCreativeLevelTwoOp()){
+            boolean arena = nationChunk.isArena();
+            nationItem.addLoreLine(Text.empty());
+            nationItem.addLoreLine(Text.translatable(arena ? "gui.nations.arena_chunk_true" : "gui.nations.arena_chunk_false").formatted(Formatting.GOLD));
+            Text lore = Text.literal("")
+                  .append(Text.translatable("gui.nations.click").formatted(Formatting.LIGHT_PURPLE,Formatting.BOLD))
+                  .append(Text.translatable("gui.nations.toggle_arena_chunk").formatted(Formatting.DARK_PURPLE));
+            nationItem.addLoreLine(lore);
+         }
          setSlot(4,nationItem);
+      }else{
+         if(player.isCreativeLevelTwoOp()){
+            boolean arena = nationChunk.isArena();
+            GuiElementBuilder arenaItem = new GuiElementBuilder(Items.DIAMOND_SWORD).hideDefaultTooltip();
+            arenaItem.setName(Text.translatable(arena ? "gui.nations.arena_chunk_true" : "gui.nations.arena_chunk_false").formatted(Formatting.BOLD,Formatting.GOLD));
+            Text lore = Text.literal("")
+                  .append(Text.translatable("gui.nations.click").formatted(Formatting.LIGHT_PURPLE,Formatting.BOLD))
+                  .append(Text.translatable("gui.nations.toggle_arena_chunk").formatted(Formatting.DARK_PURPLE));
+            arenaItem.addLoreLine(lore);
+            setSlot(4,arenaItem);
+         }
       }
       
       setSlot(0,yieldItem);

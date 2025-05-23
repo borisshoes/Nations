@@ -76,6 +76,7 @@ public class ServerPlayerEntityMixin {
    private void nations_contestDeath(DamageSource damageSource, CallbackInfo ci){
       ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
       INationsProfileComponent profile = Nations.getPlayer(player);
+      profile.removeCombatLog();
       
       if(!NationsLand.shouldKeepInventory(player.getWorld().getRegistryKey(),new ChunkPos(BlockPos.ofFloored(player.getPos())),player)){
          if(profile.getNation() != null){

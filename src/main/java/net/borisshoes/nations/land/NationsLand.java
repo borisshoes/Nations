@@ -280,6 +280,7 @@ public class NationsLand {
    }
    
    public static boolean canBreakBlock(World world, ServerPlayerEntity player, BlockPos pos, boolean message){
+      if(world.getBlockState(pos).getRegistryEntry().getIdAsString().contains("universal_graves")) return true;
       if(isOutOfBounds(world.getRegistryKey(),pos)) return false;
       if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
       if(PLAYER_DATA.get(player).bypassesClaims()) return true;
@@ -299,6 +300,7 @@ public class NationsLand {
    }
    
    public static boolean canUseOtherBlocks(World world, ServerPlayerEntity player, ItemStack stack, BlockPos pos, boolean message){
+      if(world.getBlockState(pos).getRegistryEntry().getIdAsString().contains("universal_graves")) return true;
       if(isOutOfBounds(world.getRegistryKey(),pos)) return false;
       if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
       if(PLAYER_DATA.get(player).bypassesClaims()) return true;
@@ -363,6 +365,8 @@ public class NationsLand {
       if(!entity.getWorld().getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
       if(PLAYER_DATA.get(player).bypassesClaims()) return true;
       BlockPos pos = entity.getBlockPos();
+      NationChunk nationChunk = Nations.getChunk(new ChunkPos(pos));
+      if(nationChunk != null && nationChunk.isArena()) return true;
       if(entity instanceof Monster && !entity.hasCustomName()) return true;
       if(isSpawnChunk(pos)){
          if(message) sendPermissionMessage(player,pos);
@@ -624,6 +628,7 @@ public class NationsLand {
       if(nation == null) return false;
       NationChunk nationChunk = Nations.getChunk(chunkPos);
       if(nationChunk == null) return false;
+      if(nationChunk.isArena()) return true;
       if(nationChunk.isClaimed() && nationChunk.getControllingNation().equals(nation)){
          return true;
       }

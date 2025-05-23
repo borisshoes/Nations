@@ -284,7 +284,7 @@ public class Nation {
    
    public void alertTrespass(ServerPlayerEntity player){
       boolean allow = NationsConfig.getBoolean(NationsRegistry.TRESPASS_ALERTS_CFG);
-      if(!allow) return;
+      if(!allow || player.isSpectator() || Nations.getPlayer(player).bypassesClaims()) return;
       for(ServerPlayerEntity onlinePlayer : getOnlinePlayers()){
          INationsProfileComponent profile = Nations.getPlayer(onlinePlayer);
          if(profile.trespassAlerts()){
@@ -294,7 +294,7 @@ public class Nation {
    }
    
    private void openNationGUI(ServerPlayerEntity player){
-      if(!hasPlayer(player)){
+      if(!hasPlayer(player) && !Nations.getPlayer(player).bypassesClaims()){
          player.sendMessage(Text.translatable("text.nations.nation_interact_wrong_nation").formatted(Formatting.RED));
          return;
       }
@@ -553,7 +553,7 @@ public class Nation {
    }
    
    public boolean hasPermissions(ServerPlayerEntity player){
-      return executors.contains(player.getUuid()) || leaders.contains(player.getUuid());
+      return executors.contains(player.getUuid()) || leaders.contains(player.getUuid()) || Nations.getPlayer(player).bypassesClaims();
    }
    
    public boolean hasPlayer(ServerPlayerEntity player){

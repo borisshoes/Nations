@@ -22,6 +22,7 @@ public class NationChunk {
    private boolean anchored;
    private boolean explosionsOverridden;
    private double coinMultiplier;
+   private boolean arena;
    
    public NationChunk(ChunkPos location){
       this.location = location;
@@ -32,11 +33,12 @@ public class NationChunk {
       this.machinery = false;
       this.anchored = false;
       this.explosionsOverridden = false;
+      this.arena = false;
       this.farmlandLvl = 0;
       this.coinMultiplier = 1;
    }
    
-   private NationChunk(ChunkPos location, String controllingNationId, String capturePointId, boolean influenced, boolean claimed, boolean machinery, boolean anchored, boolean explosionsOverridden, int farmlandLvl, double coinMultiplier){
+   private NationChunk(ChunkPos location, String controllingNationId, String capturePointId, boolean influenced, boolean claimed, boolean machinery, boolean anchored, boolean explosionsOverridden, boolean arena, int farmlandLvl, double coinMultiplier){
       this.location = location;
       this.controllingNationId = controllingNationId;
       this.capturePointId = capturePointId;
@@ -74,7 +76,7 @@ public class NationChunk {
          newNation.getChunks().add(this);
          
          CapturePoint capturePoint = Nations.getCapturePoint(getPos());
-         if(capturePoint != null){
+         if(capturePoint != null && (oldNation == null || !oldNation.equals(newNation))){
             capturePoint.transferOwnership(Nations.SERVER.getOverworld(),newNation);
             capturePoint.cancelAuction();
             MutableText announcement = Text.translatable("text.nations.cap_annex",
@@ -110,6 +112,14 @@ public class NationChunk {
    
    public void setExplosionsOverridden(boolean explosionsOverridden){
       this.explosionsOverridden = explosionsOverridden;
+   }
+   
+   public boolean isArena(){
+      return arena;
+   }
+   
+   public void setArena(boolean arena){
+      this.arena = arena;
    }
    
    public boolean isAnchored(){
@@ -175,6 +185,7 @@ public class NationChunk {
       compound.putBoolean("machinery",machinery);
       compound.putBoolean("anchored",anchored);
       compound.putBoolean("explosions",explosionsOverridden);
+      compound.putBoolean("arena",arena);
       compound.putInt("farmlandLvl",farmlandLvl);
       compound.putDouble("coinMultiplier",coinMultiplier);
       return compound;
@@ -195,6 +206,7 @@ public class NationChunk {
                compound.getBoolean("machinery"),
                compound.getBoolean("anchored"),
                compound.getBoolean("explosions"),
+               compound.getBoolean("arena"),
                compound.getInt("farmlandLvl"),
                compound.getDouble("coinMultiplier")
          );

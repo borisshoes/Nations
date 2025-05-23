@@ -8,9 +8,7 @@ import net.borisshoes.arcananovum.ArcanaRegistry;
 import net.borisshoes.arcananovum.core.ArcanaItem;
 import net.borisshoes.nations.blocks.ContestBoundaryBlock;
 import net.borisshoes.nations.gameplay.ResourceType;
-import net.borisshoes.nations.items.GraphicalItem;
-import net.borisshoes.nations.items.ResourceBullionItem;
-import net.borisshoes.nations.items.ResourceCoinItem;
+import net.borisshoes.nations.items.*;
 import net.borisshoes.nations.research.ResearchTech;
 import net.borisshoes.nations.utils.ConfigUtils;
 import net.borisshoes.nations.utils.MiscUtils;
@@ -80,6 +78,8 @@ public class NationsRegistry {
    public static final RegistryKey<MessageType> NATION_MESSAGE = RegistryKey.of(RegistryKeys.MESSAGE_TYPE, Identifier.of(MOD_ID,"nation_message"));
    
    public static final Item GRAPHICAL_ITEM = registerItem("graphical_item", new GraphicalItem(new Item.Settings().maxCount(64)));
+   public static final Item VICTORY_POINT_ITEM = registerItem("victory_point_item", new VictoryPointItem(new Item.Settings(),"victory_point_item"));
+   public static final Item BUG_VOUCHER_ITEM = registerItem("bug_voucher", new BugVoucherItem(new Item.Settings(),"bug_voucher"));
    public static final Item GROWTH_COIN_ITEM = registerItem("growth_coin", new ResourceCoinItem(new Item.Settings(), "growth_coin", NationsColors.GROWTH_COIN_COLOR, ResourceType.GROWTH));
    public static final Item MATERIAL_COIN_ITEM = registerItem("material_coin", new ResourceCoinItem(new Item.Settings(), "material_coin", NationsColors.MATERIAL_COIN_COLOR, ResourceType.MATERIAL));
    public static final Item RESEARCH_COIN_ITEM = registerItem("research_coin", new ResourceCoinItem(new Item.Settings(), "research_coin", NationsColors.RESEARCH_COIN_COLOR, ResourceType.RESEARCH));
@@ -222,14 +222,41 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> WAR_DURATION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("warDuration", 120, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    
-   public static final NationsConfig.ConfigSetting<?> WAR_CLOSEOFF_PERIOD_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("warCloseoffPeriod", 20, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
+   public static final NationsConfig.ConfigSetting<?> WAR_CYCLES_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warCycles", 3, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_ATTACK_LIMIT_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warAttackLimit", 6, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_ATTACK_COST_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("warAttackCost", 3.0, new ConfigUtils.DoubleConfigValue.DoubleLimits(0))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_ATTACK_CAPTURE_DURATION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warAttackCaptureDuration", 60, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_CONTEST_DURATION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warContestDuration", 10, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_DEFEND_WIN_DURATION = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warDefendWinDuration", 168, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_DEFEND_WIN_MULTIPLIER_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("warDefendWinMultiplier", 3.0, new ConfigUtils.DoubleConfigValue.DoubleLimits(1.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_BLOCKADE_DURATION = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warBlockadeDuration", 168, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    
    public static final NationsConfig.ConfigSetting<?> STACK_OVERDAMAGE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("stackOverdamageAmount", 5, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
    public static final NationsConfig.ConfigSetting<?> TRESPASS_ALERTS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.BooleanConfigValue("trespassAlerts", true)));
+   
+   public static final NationsConfig.ConfigSetting<?> DEATH_PROTECTOR_COOLDOWN_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("deathProtectorCooldown", 60, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
+   
+   public static final NationsConfig.ConfigSetting<?> COMBAT_LOG_DURATION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("combatLogDuration", 120, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
    // Biome Coin Configs
    
@@ -436,14 +463,14 @@ public class NationsRegistry {
          new ConfigUtils.IntegerConfigValue("researchRateMechanics",1000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), MECHANICS));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_SEMICONDUCTORS_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostSemiconductors",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), SEMICONDUCTORS));
+         new ConfigUtils.IntegerConfigValue("researchCostSemiconductors",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), SEMICONDUCTORS));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_SEMICONDUCTORS_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateSemiconductors",1500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), SEMICONDUCTORS));
+         new ConfigUtils.IntegerConfigValue("researchRateSemiconductors",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), SEMICONDUCTORS));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_RESONATORS_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostResonators",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), RESONATORS));
+         new ConfigUtils.IntegerConfigValue("researchCostResonators",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), RESONATORS));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_RESONATORS_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateResonators",2000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), RESONATORS));
+         new ConfigUtils.IntegerConfigValue("researchRateResonators",4000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), RESONATORS));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_BRONZEWORKING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("researchCostBronzeworking",1000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BRONZEWORKING));
@@ -466,157 +493,157 @@ public class NationsRegistry {
          new ConfigUtils.IntegerConfigValue("researchRateBlackPowder",1000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BLACK_POWDER));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ANCIENT_ALLOY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostAncientAlloy",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ANCIENT_ALLOY));
+         new ConfigUtils.IntegerConfigValue("researchCostAncientAlloy",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ANCIENT_ALLOY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ANCIENT_ALLOY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateAncientAlloy",1500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ANCIENT_ALLOY));
+         new ConfigUtils.IntegerConfigValue("researchRateAncientAlloy",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ANCIENT_ALLOY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_CRYSTAL_COMPOSITE_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostCrystalComposite",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), CRYSTAL_COMPOSITE));
+         new ConfigUtils.IntegerConfigValue("researchCostCrystalComposite",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), CRYSTAL_COMPOSITE));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_CRYSTAL_COMPOSITE_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateCrystalComposite",1500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), CRYSTAL_COMPOSITE));
+         new ConfigUtils.IntegerConfigValue("researchRateCrystalComposite",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), CRYSTAL_COMPOSITE));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_HARDENED_PLATES_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostHardenedPlates",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), HARDENED_PLATES));
+         new ConfigUtils.IntegerConfigValue("researchCostHardenedPlates",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), HARDENED_PLATES));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_HARDENED_PLATES_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateHardenedPlates",1500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), HARDENED_PLATES));
+         new ConfigUtils.IntegerConfigValue("researchRateHardenedPlates",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), HARDENED_PLATES));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_FIBERGLASS_COMPOSITE_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostFiberglassComposite",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FIBERGLASS_COMPOSITE));
+         new ConfigUtils.IntegerConfigValue("researchCostFiberglassComposite",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FIBERGLASS_COMPOSITE));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_FIBERGLASS_COMPOSITE_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateFiberglassComposite",1500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FIBERGLASS_COMPOSITE));
+         new ConfigUtils.IntegerConfigValue("researchRateFiberglassComposite",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FIBERGLASS_COMPOSITE));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_BASIC_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostBasicAlchemy",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BASIC_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchCostBasicAlchemy",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BASIC_ALCHEMY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_BASIC_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateBasicAlchemy",1500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BASIC_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchRateBasicAlchemy",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BASIC_ALCHEMY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENHANCED_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnhancedAlchemy",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchCostEnhancedAlchemy",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_ALCHEMY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ENHANCED_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateEnhancedAlchemy",2000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchRateEnhancedAlchemy",4000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_ALCHEMY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ADVANCED_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostAdvancedAlchemy",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchCostAdvancedAlchemy",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_ALCHEMY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ADVANCED_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateAdvancedAlchemy",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchRateAdvancedAlchemy",6000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_ALCHEMY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_POTENT_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostPotentAlchemy",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), POTENT_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchCostPotentAlchemy",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), POTENT_ALCHEMY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_POTENT_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRatePotentAlchemy",2000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), POTENT_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchRatePotentAlchemy",4000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), POTENT_ALCHEMY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENDURING_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnduringAlchemy",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENDURING_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchCostEnduringAlchemy",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENDURING_ALCHEMY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ENDURING_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateEnduringAlchemy",2000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENDURING_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchRateEnduringAlchemy",4000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENDURING_ALCHEMY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_PROLIFIC_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostProlificAlchemy",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), PROLIFIC_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchCostProlificAlchemy",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), PROLIFIC_ALCHEMY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_PROLIFIC_ALCHEMY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateProlificAlchemy",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), PROLIFIC_ALCHEMY));
+         new ConfigUtils.IntegerConfigValue("researchRateProlificAlchemy",6000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), PROLIFIC_ALCHEMY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_TEMPERED_WEAPONS_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostTemperedWeapons",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), TEMPERED_WEAPONS));
+         new ConfigUtils.IntegerConfigValue("researchCostTemperedWeapons",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), TEMPERED_WEAPONS));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_TEMPERED_WEAPONS_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateTemperedWeapons",2000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), TEMPERED_WEAPONS));
+         new ConfigUtils.IntegerConfigValue("researchRateTemperedWeapons",4000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), TEMPERED_WEAPONS));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ANNEALED_ARMOR_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostAnnealedArmor",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ANNEALED_ARMOR));
+         new ConfigUtils.IntegerConfigValue("researchCostAnnealedArmor",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ANNEALED_ARMOR));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ANNEALED_ARMOR_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateAnnealedArmor",2000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ANNEALED_ARMOR));
+         new ConfigUtils.IntegerConfigValue("researchRateAnnealedArmor",4000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ANNEALED_ARMOR));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ARCANA_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostArcana",5000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ARCANA));
+         new ConfigUtils.IntegerConfigValue("researchCostArcana",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ARCANA));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ARCANA_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateArcana",2000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ARCANA));
+         new ConfigUtils.IntegerConfigValue("researchRateArcana",4000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ARCANA));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ALTARS_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostAltars",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ALTARS));
+         new ConfigUtils.IntegerConfigValue("researchCostAltars",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ALTARS));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ALTARS_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateAltars",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ALTARS));
+         new ConfigUtils.IntegerConfigValue("researchRateAltars",6000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ALTARS));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENCHANTING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnchanting",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENCHANTING));
+         new ConfigUtils.IntegerConfigValue("researchCostEnchanting",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENCHANTING));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ENCHANTING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateEnchanting",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENCHANTING));
+         new ConfigUtils.IntegerConfigValue("researchRateEnchanting",6000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENCHANTING));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENHANCED_ENCHANTING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnhancedEnchanting",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_ENCHANTING));
+         new ConfigUtils.IntegerConfigValue("researchCostEnhancedEnchanting",12500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_ENCHANTING));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ENHANCED_ENCHANTING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateEnhancedEnchanting",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_ENCHANTING));
+         new ConfigUtils.IntegerConfigValue("researchRateEnhancedEnchanting",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_ENCHANTING));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_SMITHING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostSmithing",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), SMITHING));
+         new ConfigUtils.IntegerConfigValue("researchCostSmithing",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), SMITHING));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_SMITHING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateSmithing",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), SMITHING));
+         new ConfigUtils.IntegerConfigValue("researchRateSmithing",6000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), SMITHING));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_FLETCHING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostFletching",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FLETCHING));
+         new ConfigUtils.IntegerConfigValue("researchCostFletching",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FLETCHING));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_FLETCHING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateFletching",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FLETCHING));
+         new ConfigUtils.IntegerConfigValue("researchRateFletching",6000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FLETCHING));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_GRAVITIC_WEAPONRY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostGraviticWeaponry",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), GRAVITIC_WEAPONRY));
+         new ConfigUtils.IntegerConfigValue("researchCostGraviticWeaponry",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), GRAVITIC_WEAPONRY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_GRAVITIC_WEAPONRY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateGraviticWeaponry",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), GRAVITIC_WEAPONRY));
+         new ConfigUtils.IntegerConfigValue("researchRateGraviticWeaponry",6000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), GRAVITIC_WEAPONRY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_FORGING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostForging",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FORGING));
+         new ConfigUtils.IntegerConfigValue("researchCostForging",12500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FORGING));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_FORGING_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateForging",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FORGING));
+         new ConfigUtils.IntegerConfigValue("researchRateForging",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), FORGING));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ADVANCED_ARCANA_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostAdvancedArcana",12500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_ARCANA));
+         new ConfigUtils.IntegerConfigValue("researchCostAdvancedArcana",15000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_ARCANA));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ADVANCED_ARCANA_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateAdvancedArcana",3000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_ARCANA));
+         new ConfigUtils.IntegerConfigValue("researchRateAdvancedArcana",8500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_ARCANA));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_RUNIC_ARCHERY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostRunicArchery",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), RUNIC_ARCHERY));
+         new ConfigUtils.IntegerConfigValue("researchCostRunicArchery",12500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), RUNIC_ARCHERY));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_RUNIC_ARCHERY_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateRunicArchery",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), RUNIC_ARCHERY));
+         new ConfigUtils.IntegerConfigValue("researchRateRunicArchery",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), RUNIC_ARCHERY));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ARCHETYPE_CHANGE_ITEM_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostArchetypeChangeItem",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ARCHETYPE_CHANGE_ITEM));
+         new ConfigUtils.IntegerConfigValue("researchCostArchetypeChangeItem",12500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ARCHETYPE_CHANGE_ITEM));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ARCHETYPE_CHANGE_ITEM_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateArchetypeChangeItem",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ARCHETYPE_CHANGE_ITEM));
+         new ConfigUtils.IntegerConfigValue("researchRateArchetypeChangeItem",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ARCHETYPE_CHANGE_ITEM));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_BASIC_AUGMENTATION_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostBasicAugmentation",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BASIC_AUGMENTATION));
+         new ConfigUtils.IntegerConfigValue("researchCostBasicAugmentation",12500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BASIC_AUGMENTATION));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_BASIC_AUGMENTATION_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateBasicAugmentation",2500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BASIC_AUGMENTATION));
+         new ConfigUtils.IntegerConfigValue("researchRateBasicAugmentation",7500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), BASIC_AUGMENTATION));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENHANCED_AUGMENTATION_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnhancedAugmentation",12500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_AUGMENTATION));
+         new ConfigUtils.IntegerConfigValue("researchCostEnhancedAugmentation",15000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_AUGMENTATION));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ENHANCED_AUGMENTATION_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateEnhancedAugmentation",3000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_AUGMENTATION));
+         new ConfigUtils.IntegerConfigValue("researchRateEnhancedAugmentation",8500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ENHANCED_AUGMENTATION));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ADVANCED_AUGMENTATION_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostAdvancedAugmentation",12500, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_AUGMENTATION));
+         new ConfigUtils.IntegerConfigValue("researchCostAdvancedAugmentation",20000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_AUGMENTATION));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ADVANCED_AUGMENTATION_CFG = registerConfigSetting(new NationsConfig.ResearchConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateAdvancedAugmentation",3000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_AUGMENTATION));
+         new ConfigUtils.IntegerConfigValue("researchRateAdvancedAugmentation",10000, new ConfigUtils.IntegerConfigValue.IntLimits(1)), ADVANCED_AUGMENTATION));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_POTIONS_PER_TIER_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("researchCostPotionsPerTier", 1000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_POTIONS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRatePotions", 2000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchRatePotions", 5000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ARCANA_ITEMS_PER_RARITY_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostArcanaItemsPerRarity", 1000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchCostArcanaItemsPerRarity", 2500, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ARCANA_ITEMS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateArcanaItems", 1000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchRateArcanaItems", 5000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENCHANTMENTS_SINGLE_PER_LEVEL_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsSinglePerLevel", 2500, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsSinglePerLevel", 5000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENCHANTMENTS_DOUBLE_PER_LEVEL_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsDoublePerLevel", 1000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsDoublePerLevel", 2000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENCHANTMENTS_TRIPLE_PER_LEVEL_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsTriplePerLevel", 1000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsTriplePerLevel", 2000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENCHANTMENTS_QUADRUPLE_PER_LEVEL_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsQuadruplePerLevel", 750, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsQuadruplePerLevel", 1500, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_ENCHANTMENTS_QUINTUPLE_PER_LEVEL_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsQuintuplePerLevel", 500, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchCostEnchantmentsQuintuplePerLevel", 1000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ENCHANTMENTS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.IntegerConfigValue("researchRateEnchantments", 2000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+         new ConfigUtils.IntegerConfigValue("researchRateEnchantments", 5000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    
    static{
       registerTech(MECHANICS, new ResearchTech(MECHANICS,1,new RegistryKey[]{},RESEARCH_COST_MECHANICS_CFG,RESEARCH_RATE_MECHANICS_CFG).withShowStack(Items.PISTON)
@@ -868,6 +895,8 @@ public class NationsRegistry {
          entries.add(new ItemStack(GROWTH_BULLION_ITEM));
          entries.add(new ItemStack(MATERIAL_BULLION_ITEM));
          entries.add(new ItemStack(RESEARCH_BULLION_ITEM));
+         entries.add(new ItemStack(VICTORY_POINT_ITEM));
+         entries.add(new ItemStack(BUG_VOUCHER_ITEM));
       }).build();
       
       PolymerItemGroupUtils.registerPolymerItemGroup(Identifier.of(MOD_ID,"nations_items"), ITEM_GROUP);

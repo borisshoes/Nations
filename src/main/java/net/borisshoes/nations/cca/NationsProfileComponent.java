@@ -1,6 +1,8 @@
 package net.borisshoes.nations.cca;
 
 import net.borisshoes.nations.Nations;
+import net.borisshoes.nations.NationsConfig;
+import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.gameplay.ChatChannel;
 import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.utils.NationsColors;
@@ -9,7 +11,9 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 
 public class NationsProfileComponent implements INationsProfileComponent{
@@ -24,6 +28,8 @@ public class NationsProfileComponent implements INationsProfileComponent{
    private String lastTerritory = "";
    private int titleCooldown = 0;
    private boolean trespassAlerts = true;
+   private int combatLog = 0;
+   private String combatLogPlayerId = "";
    
    public NationsProfileComponent(PlayerEntity player){
       this.player = player;
@@ -176,6 +182,38 @@ public class NationsProfileComponent implements INationsProfileComponent{
    public void tick(){
       if(this.titleCooldown > 0){
          titleCooldown--;
+      }
+      if(this.combatLog > 0){
+         combatLog--;
+         
+         if(combatLog == 0){
+            player.sendMessage(Text.translatable("text.nations.combat_exit").formatted(Formatting.GREEN),false);
+         }
+      }
+   }
+   
+   public void removeCombatLog(){
+      this.combatLog = 0;
+   }
+   
+   @Override
+   public int getCombatLog(){
+      return combatLog;
+   }
+   
+   @Override
+   public String getCombatLogPlayerId(){
+      return combatLogPlayerId;
+   }
+   
+   @Override
+   public void resetCombatLog(PlayerEntity player){
+      boolean inCombat = this.combatLog > 0;
+      int duration = NationsConfig.getInt(NationsRegistry.COMBAT_LOG_DURATION_CFG);
+      this.combatLog = duration * 20;
+      this.combatLogPlayerId = player.getUuidAsString();
+      if(!inCombat && combatLog > 0){
+         player.sendMessage(Text.translatable("text.nations.combat_warning",duration).formatted(Formatting.BOLD,Formatting.RED),false);
       }
    }
    

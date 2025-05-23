@@ -29,7 +29,7 @@ import java.util.List;
 
 import static net.borisshoes.nations.Nations.MOD_ID;
 
-public class ResourceBullionItem  extends Item implements PolymerItem {
+public class ResourceBullionItem extends Item implements PolymerItem {
    
    private final int color;
    private final String id;

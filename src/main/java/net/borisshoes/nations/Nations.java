@@ -7,6 +7,7 @@ import net.borisshoes.nations.cca.INationsProfileComponent;
 import net.borisshoes.nations.gameplay.*;
 import net.borisshoes.nations.integration.DynmapCalls;
 import net.borisshoes.nations.integration.DynmapFunctions;
+import net.borisshoes.nations.items.BugVoucherItem;
 import net.borisshoes.nations.land.InteractionEvents;
 import net.borisshoes.nations.research.ResearchTech;
 import net.borisshoes.nations.utils.ConfigUtils;
@@ -111,6 +112,7 @@ public class Nations implements ModInitializer {
       }
       
       NationsRegistry.withServer(server);
+      BugVoucherItem.fillLoot(server);
    }
    
    public static void serverStarted(MinecraftServer server){

@@ -75,6 +75,7 @@ public class PlayerConnectionCallback {
       INationsProfileComponent profile = Nations.getPlayer(player);
       profile.removePlayerTeam(server);
       profile.setLastOnline(System.currentTimeMillis());
+      boolean inCombat = profile.getCombatLog() > 0;
       
       for(WarManager.Contest contest : WarManager.getActiveContests()){
          if(contest.attacker().equals(player)){
@@ -82,6 +83,10 @@ public class PlayerConnectionCallback {
          }else if(contest.defender().equals(player)){
             player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE, contest.attacker(), contest.attacker()),player.getHealth()*100);
          }
+      }
+      
+      if(player.isAlive() && inCombat){
+         player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE),player.getHealth()*100);
       }
    }
 }

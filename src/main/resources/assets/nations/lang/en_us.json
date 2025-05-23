@@ -665,5 +665,19 @@
   "text.nations.wilderness": "Wilderness",
   "text.nations.world_already_initialized": "The world is already initialized",
   "text.nations.world_not_initialized": "The world is not yet initialized for Nations",
-  "text.nations.yield": "Yield"
+  "text.nations.yield": "Yield",
+  "text.nations.combat_warning": "You have entered combat! Do not log out for %s seconds!",
+  "text.nations.combat_exit": "You have left combat, you may safely log out now.",
+  "text.nations.victory_point_item_lore": "Worth %s Victory Points",
+  "item.nations.knockback_stick": "Knockback Stick",
+  "item.nations.ticket": "Bug Voucher",
+  "item.nations.bug_voucher": "Bug Voucher",
+  "item.nations.victory_point_item": "Victory Point Item",
+  "text.nations.slot_num": "Slot Number %s",
+  "gui.nations.choose_slots": "Choose %s Slots",
+  "gui.nations.voucher_go": "Roll the Odds!",
+  "gui.nations.bug_voucher_title": "Bug Voucher",
+  "gui.nations.arena_chunk_true": "Active Arena Chunk",
+  "gui.nations.arena_chunk_false": "Make Arena Chunk",
+  "gui.nations.toggle_arena_chunk": " to toggle this Chunk as an Arena Chunk"
 }

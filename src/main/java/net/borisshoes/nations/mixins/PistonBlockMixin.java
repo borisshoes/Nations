@@ -18,9 +18,9 @@ public class PistonBlockMixin {
    
    @Inject(method = "onSyncedBlockEvent", at = @At("HEAD"), cancellable = true)
    private void nations_stopPiston(BlockState state, World world, BlockPos pos, int type, int data, CallbackInfoReturnable<Boolean> cir){
-      if(!NationsLand.redstoneEnabled(world.getRegistryKey(),new ChunkPos(pos))){
-         cir.setReturnValue(false);
-         cir.cancel();
-      }
+//      if(!NationsLand.redstoneEnabled(world.getRegistryKey(),new ChunkPos(pos))){
+//         cir.setReturnValue(false);
+//         cir.cancel();
+//      }
    }
 }

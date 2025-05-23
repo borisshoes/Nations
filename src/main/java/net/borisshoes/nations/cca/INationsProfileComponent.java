@@ -2,7 +2,9 @@ package net.borisshoes.nations.cca;
 
 import net.borisshoes.nations.gameplay.ChatChannel;
 import net.borisshoes.nations.gameplay.Nation;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import org.ladysnake.cca.api.v3.component.ComponentV3;
 
@@ -18,6 +20,8 @@ public interface INationsProfileComponent extends ComponentV3 {
    int titleCooldown();
    void resetTitleCooldown();
    boolean trespassAlerts();
+   int getCombatLog();
+   String getCombatLogPlayerId();
    
    void setNation(Nation nation);
    void setClaimBypass(boolean bypass);
@@ -31,4 +35,6 @@ public interface INationsProfileComponent extends ComponentV3 {
    void setLastTerritory(String lastTerritory);
    void tick();
    void toggleTrespassAlerts();
+   void resetCombatLog(PlayerEntity player);
+   void removeCombatLog();
 }

@@ -18,6 +18,7 @@
     "ContainmentCircletMixin",
     "CrafterBlockMixin",
     "CraftingScreenHandlerMixin",
+    "DeathProtectionComponentMixin",
     "DragonEggBlockMixin",
     "EnchantEntryAccessor",
     "EndermanPickupMixin",
