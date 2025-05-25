@@ -536,6 +536,12 @@ public class NationsLand {
       return patternInd != -1 && !structure.blockStates().get(patternInd).isAir();
    }
    
+   public static boolean isSpawnDMZChunk(BlockPos pos){
+      ChunkPos chunkPos = new ChunkPos(pos);
+      int radius = NationsConfig.getInt(NationsRegistry.SPAWN_RADIUS_CFG) + NationsConfig.getInt(NationsRegistry.SPAWN_DMZ_RADIUS_CFG);
+      return chunkPos.x >= -radius && chunkPos.x < radius && chunkPos.z >= -radius && chunkPos.z < radius;
+   }
+   
    public static boolean isSpawnChunk(BlockPos pos){
       ChunkPos chunkPos = new ChunkPos(pos);
       int radius = NationsConfig.getInt(NationsRegistry.SPAWN_RADIUS_CFG);

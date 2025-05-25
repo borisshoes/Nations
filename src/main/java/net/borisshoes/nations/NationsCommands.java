@@ -348,7 +348,7 @@ public class NationsCommands {
                for (int dz = -radius; dz <= radius; dz++) {
                   if (Math.abs(dx) + Math.abs(dz) <= radius) {
                      ChunkPos chunkPos2 = new ChunkPos(surveyPos.x + dx, surveyPos.z + dz);
-                     if(NationsLand.isSpawnChunk(chunkPos2.getStartPos())){
+                     if(NationsLand.isSpawnDMZChunk(chunkPos2.getStartPos())){
                         src.sendMessage(Text.translatable("text.nations.cannot_settle_near_spawn"));
                         break block;
                      }
@@ -419,7 +419,7 @@ public class NationsCommands {
             for (int dz = -settleRadius; dz <= settleRadius; dz++) {
                if (Math.abs(dx) + Math.abs(dz) <= settleRadius) {
                   ChunkPos chunkPos2 = new ChunkPos(chunkPos.x + dx, chunkPos.z + dz);
-                  if(NationsLand.isSpawnChunk(chunkPos2.getStartPos())){
+                  if(NationsLand.isSpawnDMZChunk(chunkPos2.getStartPos())){
                      src.sendError(Text.translatable("text.nations.cannot_settle_near_spawn"));
                      return -1;
                   }

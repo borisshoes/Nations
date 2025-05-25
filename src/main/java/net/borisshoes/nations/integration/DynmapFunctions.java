@@ -35,6 +35,7 @@ public class DynmapFunctions {
    
    private static final String NETHER_RIFT_MARKER = "nations.nether_rift_marker";
    private static final String SPAWN_AREA_MARKER = "nations.spawn_area_marker";
+   private static final String SPAWN_DMZ_AREA_MARKER = "nations.spawn_dmz_area_marker";
    private static final String BORDER_MARKER = "nations.border_marker";
    
    public static void reg() {
@@ -94,13 +95,18 @@ public class DynmapFunctions {
    protected static void addSpawnMarker(){
       if(interestPointsMarkerSet == null) return;
       int radius = NationsConfig.getInt(NationsRegistry.SPAWN_RADIUS_CFG);
+      int dmzRadius = NationsConfig.getInt(NationsRegistry.SPAWN_DMZ_RADIUS_CFG)+radius;
       
       BlockPos corner1 = new ChunkPos(-radius,-radius).getBlockPos(0,0,0);
       BlockPos corner2 = new ChunkPos(radius-1, radius-1).getBlockPos(15,0,15);
+      BlockPos corner3 = new ChunkPos(-dmzRadius,-dmzRadius).getBlockPos(0,0,0);
+      BlockPos corner4 = new ChunkPos(dmzRadius-1, dmzRadius-1).getBlockPos(15,0,15);
+      AreaMarker dmzMarker = interestPointsMarkerSet.createAreaMarker(SPAWN_DMZ_AREA_MARKER,"Spawn Demilitarized Zone",false, getWorldName(), new double[]{corner3.getX(),corner4.getX()}, new double[]{corner3.getZ(),corner4.getZ()}, false);
       AreaMarker marker = interestPointsMarkerSet.createAreaMarker(SPAWN_AREA_MARKER,"Spawn",false, getWorldName(), new double[]{corner1.getX(),corner2.getX()}, new double[]{corner1.getZ(),corner2.getZ()}, false);
-      if(marker == null) return;
       marker.setLineStyle(5,0.8, NationsColors.SPAWN_MAP_BORDER_COLOR);
-      marker.setFillStyle(0.2, NationsColors.SPAWN_MAP_FILL_COLOR);
+      marker.setFillStyle(0.3, NationsColors.SPAWN_MAP_FILL_COLOR);
+      dmzMarker.setLineStyle(3,0.5, NationsColors.SPAWN_MAP_BORDER_COLOR);
+      dmzMarker.setFillStyle(0.1, NationsColors.SPAWN_MAP_FILL_COLOR);
    }
    
    

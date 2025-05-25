@@ -135,6 +135,9 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> SPAWN_RADIUS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("spawnRadius", 2, new ConfigUtils.IntegerConfigValue.IntLimits(0,1875000))));
    
+   public static final NationsConfig.ConfigSetting<?> SPAWN_DMZ_RADIUS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("spawnDMZRadius", 6, new ConfigUtils.IntegerConfigValue.IntLimits(0,1875000))));
+   
    public static final NationsConfig.ConfigSetting<?> WORLD_BORDER_RADIUS_OVERWORLD_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("worldBorderRadiusOverworld", 64, new ConfigUtils.IntegerConfigValue.IntLimits(1,1875000))));
    
