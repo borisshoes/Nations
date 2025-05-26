@@ -1,24 +1,26 @@
 package net.borisshoes.nations.utils;
 
+import eu.pb4.polymer.virtualentity.api.ElementHolder;
+import eu.pb4.polymer.virtualentity.api.elements.BlockDisplayElement;
 import net.borisshoes.arcananovum.ArcanaNovum;
 import net.borisshoes.nations.Nations;
+import net.minecraft.block.Blocks;
 import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.command.WorldBorderCommand;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.border.WorldBorder;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Supplier;
 
 public class ParticleEffectUtils {
@@ -54,52 +56,6 @@ public class ParticleEffectUtils {
       world.spawnParticles(ParticleTypes.PORTAL,pos.getX(),pos.getY(),pos.getZ(),10,0.5,1.25,0.5,1);
       world.spawnParticles(ParticleTypes.PORTAL,pos.getX(),pos.getY(),pos.getZ(),30,2,0.1,2,0.3);
    }
-   
-   public static void worldBorder(ServerWorld world, ServerPlayerEntity player, int border, double showDist){
-      ParticleEffect type = world.getRegistryKey().equals(ServerWorld.NETHER) ? ParticleTypes.TRIAL_SPAWNER_DETECTION_OMINOUS : ParticleTypes.TRIAL_SPAWNER_DETECTION;
-      for(Direction dir : Direction.values()){
-         if(dir.getAxis() == Direction.Axis.Y) continue;
-         double playerVal = player.getPos().multiply(dir.getDoubleVector()).length();
-         
-         if(playerVal > border - showDist){
-            final double bigSpacing = 1;
-            final double bigRadius = 40;
-            
-            for(double h = -bigRadius; h < bigRadius; h += bigSpacing){
-               for(double v = -bigRadius; v < bigRadius; v += bigSpacing){
-                  Vec3d particlePos;
-                  if(dir.getAxis() == Direction.Axis.X){
-                     particlePos = new Vec3d(0,player.getY()+v,player.getZ()+h);
-                  }else{
-                     particlePos = new Vec3d(player.getX()+h,player.getY()+v,0);
-                  }
-                  particlePos = particlePos.add(dir.getDoubleVector().multiply(border));
-                  if(Math.abs(particlePos.x) > border || Math.abs(particlePos.z) > border) continue;
-                  spawnLongParticle(world, type, particlePos.x, particlePos.y, particlePos.z, 0, 0, 0, 0.01, 1);
-               }
-            }
-         }
-         if(playerVal > border - 0.5*showDist){
-            final double smallSpacing = 0.5;
-            final double smallRadius = 10;
-            
-            for(double h = -smallRadius; h < smallRadius; h += smallSpacing){
-               for(double v = -smallRadius; v < smallRadius; v += smallSpacing){
-                  Vec3d particlePos;
-                  if(dir.getAxis() == Direction.Axis.X){
-                     particlePos = new Vec3d(0,player.getY()+v,player.getZ()+h);
-                  }else{
-                     particlePos = new Vec3d(player.getX()+h,player.getY()+v,0);
-                  }
-                  particlePos = particlePos.add(dir.getDoubleVector().multiply(border));
-                  if(Math.abs(particlePos.x) > border || Math.abs(particlePos.z) > border) continue;
-                  spawnLongParticle(world, type, particlePos.x, particlePos.y, particlePos.z, 0, 0, 0, 0.01, 1);
-               }
-            }
-         }
-      }
-   }
-   
    
    public static void lightningBolt(ServerWorld world, Vec3d p1, Vec3d p2, int numSegments, double maxDevDist, ParticleEffect type, int particlesPerBlock, int count, double delta, double speed, boolean longDist){
       if(numSegments <= 0) return;

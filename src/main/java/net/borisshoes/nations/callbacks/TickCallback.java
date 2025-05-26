@@ -87,10 +87,6 @@ public class TickCallback {
                   }
                }
                
-               if(Math.abs(dist) < 32){
-                  ParticleEffectUtils.worldBorder(player.getServerWorld(),player,border,32);
-               }
-               
                ItemStack helmetStack = player.getEquippedStack(EquipmentSlot.HEAD);
                if(!helmetStack.isEmpty() && helmetStack.getItem() instanceof ArmorItem && !helmetStack.isOf(ArcanaRegistry.NUL_MEMENTO.getItem())){
                   EquippableComponent equippableComponent = helmetStack.get(DataComponentTypes.EQUIPPABLE);

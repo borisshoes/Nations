@@ -36,6 +36,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.GameRules;
+import net.minecraft.world.border.WorldBorder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -122,6 +123,8 @@ public class Nations implements ModInitializer {
       if(!data.getRiftData().isEmpty()){
          LAST_RIFT = NetherRift.fromNbt(data.getRiftData(),server.getOverworld(),server.getWorld(ServerWorld.NETHER));
       }
+      
+      refreshWorldBorders();
    }
    
    public static boolean isWorldInitialized(){
@@ -226,6 +229,22 @@ public class Nations implements ModInitializer {
    
    public static void announce(MutableText text){
       Nations.SERVER.getPlayerManager().broadcast(text,false);
+   }
+   
+   public static void refreshWorldBorders(){
+      for(ServerWorld world : SERVER.getWorlds()){
+         int border = -1;
+         if(world.getRegistryKey().equals(ServerWorld.OVERWORLD) || world.getRegistryKey().equals(NationsRegistry.CONTEST_DIM)){
+            border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
+         }else if(world.getRegistryKey().equals(ServerWorld.NETHER)){
+            border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_NETHER_CFG);
+         }
+         if(border == -1) continue;
+         
+         WorldBorder worldBorder = world.getWorldBorder();
+         worldBorder.setCenter(0,0);
+         worldBorder.setSize(border*32);
+      }
    }
    
    public static void refreshNationChunkOwnership(){

@@ -107,7 +107,7 @@ public class NetherRift {
       int z = overworld.getRandom().nextInt(16);
       int y = 64;
       
-      BlockPos.Mutable mutable = new BlockPos.Mutable(x, (double)(overworld.getLogicalHeight() + 1), z);
+      BlockPos.Mutable mutable = chunk.getPos().getBlockPos(x,overworld.getLogicalHeight() + 1,z).mutableCopy();
       boolean topAir = overworld.getBlockState(mutable).isAir();
       mutable.move(Direction.DOWN);
       boolean bottomAir = overworld.getBlockState(mutable).isAir();

@@ -31,6 +31,7 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Heightmap;
+import net.minecraft.world.border.WorldBorder;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 
@@ -452,7 +453,9 @@ public class NationsCommands {
          ctx.getSource().sendMessage(Text.translatable("text.nations.reload_config"));
          
          Nations.refreshNationChunkOwnership();
+         Nations.refreshWorldBorders();
          DynmapCalls.redrawDynmap();
+         
          
          return 1;
       }catch(Exception e){
