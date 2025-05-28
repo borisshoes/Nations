@@ -103,15 +103,15 @@ public class NationsUtils {
                if(cap == null) continue;
                switch(cap.getType()){
                   case GROWTH -> {
-                     growth += cap.getYield();
+                     growth += cap.getRawYield();
                      growthC++;
                   }
                   case MATERIAL -> {
-                     material += cap.getYield();
+                     material += cap.getRawYield();
                      materialC++;
                   }
                   case RESEARCH -> {
-                     research += cap.getYield();
+                     research += cap.getRawYield();
                      researchC++;
                   }
                }

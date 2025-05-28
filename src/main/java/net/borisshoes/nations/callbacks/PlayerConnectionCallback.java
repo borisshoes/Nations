@@ -85,6 +85,8 @@ public class PlayerConnectionCallback {
          }
       }
       
+      WarManager.cancelPendingContestsFromPlayer(player);
+      
       if(player.isAlive() && inCombat){
          player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE),player.getHealth()*100);
       }

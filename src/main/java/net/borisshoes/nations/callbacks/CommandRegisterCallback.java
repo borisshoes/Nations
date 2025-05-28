@@ -97,6 +97,12 @@ public class CommandRegisterCallback {
                   .then(argument("time", longArg())
                         .executes(context -> NationsCommands.setNextWar(context, getLong(context, "time")))))
             .then(literal("getNextWar").requires(source -> source.hasPermissionLevel(2)).executes(NationsCommands::getNextWar))
+            .then(literal("transferCap").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("nation_id", word()).suggests(NationsCommands::getNationSuggestions)
+                        .executes(context -> NationsCommands.transferCapturePoint(context, getString(context, "nation_id"), ChunkSectionPos.from(context.getSource().getPosition())))
+                        .then(argument("x", integer())
+                              .then(argument("z", integer())
+                                    .executes(context -> NationsCommands.transferCapturePoint(context, getString(context, "nation_id"), ChunkSectionPos.from(getInteger(context,"x"),0,getInteger(context,"z"))))))))
       );
       
       dispatcher.register(literal("lc").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.LOCAL)));

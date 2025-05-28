@@ -31,7 +31,6 @@ import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.border.WorldBorder;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 
@@ -119,9 +118,9 @@ public class NationsCommands {
                CapturePoint cap = Nations.getCapturePoint(new ChunkPos(pos.x, pos.z));
                if(cap != null){
                   switch(cap.getType()){
-                     case GROWTH -> capValues = new ImmutableTriple<>(cap.getYield(),0,0);
-                     case MATERIAL -> capValues = new ImmutableTriple<>(0,cap.getYield(),0);
-                     case RESEARCH -> capValues = new ImmutableTriple<>(0,0,cap.getYield());
+                     case GROWTH -> capValues = new ImmutableTriple<>(cap.getRawYield(),0,0);
+                     case MATERIAL -> capValues = new ImmutableTriple<>(0,cap.getRawYield(),0);
+                     case RESEARCH -> capValues = new ImmutableTriple<>(0,0,cap.getRawYield());
                   }
                }
                chunkMap.put(new ChunkPos(pos.x, pos.z),new Pair<>(
@@ -1227,6 +1226,38 @@ public class NationsCommands {
          INationsProfileComponent profile = Nations.getPlayer(player);
          profile.toggleTrespassAlerts();
          src.sendMessage(Text.translatable("text.nations.toggled_trespass_alerts",String.valueOf(profile.trespassAlerts())));
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int transferCapturePoint(CommandContext<ServerCommandSource> ctx, String nationId, ChunkSectionPos chunkPos){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         CapturePoint cap = Nations.getCapturePoint(chunkPos.toChunkPos());
+         
+         if(cap == null){
+            src.sendError(Text.translatable("text.nations.no_cap_error"));
+            return -1;
+         }
+         
+         Nation nation = Nations.getNation(nationId);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_nation_error"));
+            return -1;
+         }
+         
+         cap.transferOwnership(src.getServer().getOverworld(),nation);
+         MutableText announcement = Text.translatable("text.nations.cap_transfer",
+               cap.getType().getText().formatted(Formatting.BOLD),
+               Text.translatable("text.nations.capture_point").formatted(Formatting.BOLD,cap.getType().getTextColor()),
+               Text.literal(cap.getChunkPos().toString()).formatted(Formatting.YELLOW,Formatting.BOLD),
+               nation.getFormattedName().formatted(Formatting.BOLD)
+         ).formatted(Formatting.DARK_AQUA);
+         Nations.announce(announcement);
          
          return 1;
       }catch(Exception e){

@@ -23,6 +23,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 
@@ -90,11 +91,7 @@ public class ServerPlayerEntityMixin {
          }
       }
       
-      for(Map.Entry<CapturePoint, ServerPlayerEntity> entry : WarManager.getPendingContests().entrySet()){
-         if(entry.getValue().equals(player)){
-            // TODO cancel
-         }
-      }
+      WarManager.cancelPendingContestsFromPlayer(player);
       
       WarManager.Contest completedContest = null;
       ServerPlayerEntity winner = null;

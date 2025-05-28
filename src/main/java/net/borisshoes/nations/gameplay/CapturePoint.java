@@ -21,6 +21,8 @@ import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -50,6 +52,7 @@ public class CapturePoint {
    private HolderAttachment attachment;
    private int interactCooldown = 0;
    private boolean updateHolo = false;
+   private List<Pair<Double,Integer>> yieldModifiers = new ArrayList<>();
    
    public CapturePoint(ChunkPos pos, int y, ResourceType type, int yield){
       this.chunkPos = pos;
@@ -60,7 +63,7 @@ public class CapturePoint {
       this.id = UUID.randomUUID();
    }
    
-   private CapturePoint(ChunkPos chunkPos, int y, ResourceType type, int yield, String controllingNationId, UUID id, int storedCoins, long auctionStartTime, HashMap<String,Double> influence){
+   private CapturePoint(ChunkPos chunkPos, int y, ResourceType type, int yield, String controllingNationId, UUID id, int storedCoins, long auctionStartTime, HashMap<String,Double> influence, List<Pair<Double,Integer>> yieldModifiers){
       this.chunkPos = chunkPos;
       this.type = type;
       this.y = y;
@@ -72,8 +75,20 @@ public class CapturePoint {
       this.influence = influence;
    }
    
+   public int getRawYield(){
+      return this.yield;
+   }
+   
    public int getYield(){
-      return yield;
+      return (int) Math.round(yield * getOutputModifier());
+   }
+   
+   public double getOutputModifier(){
+      double modifier = 1.0;
+      for(Pair<Double, Integer> pair : yieldModifiers){
+         modifier *= pair.getLeft();
+      }
+      return modifier;
    }
    
    public Nation getControllingNation(){
@@ -116,17 +131,36 @@ public class CapturePoint {
    
    public void hourlyTick(ServerWorld serverWorld){
       if(getControllingNation() != null){
-         this.storedCoins += this.yield / 24;
+         this.storedCoins += this.getYield() / 24;
          this.updateHolo = true;
       }
+      
+      List<Pair<Double,Integer>> newModifiers = new ArrayList<>();
+      for(Pair<Double, Integer> mod : yieldModifiers){
+         if(mod.getRight() > 1){
+            newModifiers.add(new Pair<>(mod.getLeft(), mod.getRight()-1));
+         }
+      }
+      this.yieldModifiers = newModifiers;
    }
    
    public void dailyTick(ServerWorld serverWorld){
       if(getControllingNation() != null){
-         this.storedCoins += this.yield % 24;
+         this.storedCoins += this.getYield() % 24;
          this.updateHolo = true;
-         getControllingNation().addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_CAP_CFG));
+         if(getYield() != 0) getControllingNation().addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_CAP_CFG));
       }
+   }
+   
+   public void buffOutput(){
+      int buffDuration = NationsConfig.getInt(NationsRegistry.WAR_DEFEND_WIN_DURATION);
+      double buffModifier = NationsConfig.getDouble(NationsRegistry.WAR_DEFEND_WIN_MULTIPLIER_CFG);
+      yieldModifiers.add(new Pair<>(buffModifier,buffDuration));
+   }
+   
+   public void blockadeOutput(){
+      int duration = NationsConfig.getInt(NationsRegistry.WAR_BLOCKADE_DURATION);
+      yieldModifiers.add(new Pair<>(0.0,duration));
    }
    
    public void collectCoins(ServerWorld world){
@@ -247,6 +281,17 @@ public class CapturePoint {
       return this.chunkPos.getBlockPos(8,y+5,8).toCenterPos();
    }
    
+   public int calculateAttackCost(Nation attacking){
+      int attackCost = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_COST_CFG);
+      if(this.getControllingNation() == null) return attackCost;
+      Nation owner = getControllingNation();
+      Pair<ChunkPos,Double> attackerMod = calculateNearestInfluence(attacking);
+      Pair<ChunkPos,Double> defenderMod = calculateNearestInfluence(owner);
+      if(Nations.getChunk(getChunkPos()).getControllingNation() != null) return attackCost;
+      double costModifier = Math.max(0.25,(defenderMod.getRight() - attackerMod.getRight()) / 2.0 + 1);
+      return (int) (costModifier*attackCost*getRawYield());
+   }
+   
    private void openCapGUI(ServerPlayerEntity player){
       Nation playerNation = Nations.getNation(player);
       if(playerNation == null){
@@ -258,16 +303,30 @@ public class CapturePoint {
          return;
       }
       
-      // TODO War Contest / Defend
       CapturePointGui gui;
       if(getControllingNation() == null){
          gui = new CapturePointGui(player,this, CapturePointGui.Mode.AUCTION);
       }else{
          if(getControllingNation().equals(playerNation)){
-            gui = new CapturePointGui(player,this, CapturePointGui.Mode.COLLECT);
+            if(WarManager.capIsContested(this)){
+               gui = new CapturePointGui(player,this, CapturePointGui.Mode.DEFEND);
+            }else{
+               gui = new CapturePointGui(player,this, CapturePointGui.Mode.COLLECT);
+            }
          }else{
-            player.sendMessage(Text.translatable("text.nations.cap_interact_wrong_nation").formatted(Formatting.RED));
-            return;
+            boolean isWar = Nations.isWartime();
+            if(!isWar){
+               player.sendMessage(Text.translatable("text.nations.cap_interact_wrong_nation").formatted(Formatting.RED));
+               return;
+            }else{
+               boolean canContest = WarManager.canContestCap(this, player);
+               if(!canContest){
+                  player.sendMessage(Text.translatable("text.nations.war_cannot_contest").formatted(Formatting.RED));
+                  return;
+               }else{
+                  gui = new CapturePointGui(player,this, CapturePointGui.Mode.CONTEST);
+               }
+            }
          }
       }
       gui.open();
@@ -275,7 +334,8 @@ public class CapturePoint {
    
    private ElementHolder getNewHologram(ServerWorld serverWorld){
       TextDisplayElement line1 = new TextDisplayElement(Text.translatable("text.nations.capture_point_header",Text.translatable(getType().getTranslation())).formatted(getType().getTextColor(), Formatting.BOLD));
-      TextDisplayElement line2 = new TextDisplayElement(Text.translatable("text.nations.capture_point_yield",getYield()).formatted(getType().getTextColor()));
+      Text yieldText = getOutputModifier() != 1.0 ? Text.translatable("text.nations.capture_point_yield_modified",getYield(),String.format("%03.2f",getOutputModifier())).formatted(getType().getTextColor()) : Text.translatable("text.nations.capture_point_yield",getYield()).formatted(getType().getTextColor());
+      TextDisplayElement line2 = new TextDisplayElement(yieldText);
       ItemDisplayElement icon = new ItemDisplayElement(GraphicalItem.with(getType().getGraphicItem()));
       InteractionElement click = new InteractionElement(new VirtualElement.InteractionHandler(){
          public void click(ServerPlayerEntity player){
@@ -348,8 +408,9 @@ public class CapturePoint {
                MutableText controlText = getControllingNation() == null ?
                      Text.translatable("text.nations.uncontrolled") :
                      Text.translatable("text.nations.controlled_by",getControllingNation().getFormattedName());
+               Text yieldText = getOutputModifier() != 1.0 ? Text.translatable("text.nations.capture_point_yield_modified",getYield(),String.format("%03.2f",getOutputModifier())).formatted(getType().getTextColor()) : Text.translatable("text.nations.capture_point_yield",getYield()).formatted(getType().getTextColor());
+               line2Text.setText(yieldText);
                ctrlText.setText(controlText);
-               
                coinsText.setText(getStoredLineText());
                
                tickCount = 0;
@@ -480,6 +541,14 @@ public class CapturePoint {
       NbtCompound infComp = new NbtCompound();
       influence.forEach(infComp::putDouble);
       compound.put("influence",infComp);
+      NbtList mods = new NbtList();
+      for(Pair<Double, Integer> pair : yieldModifiers){
+         NbtCompound mod = new NbtCompound();
+         mod.putInt("duration",pair.getRight());
+         mod.putDouble("modifier",pair.getLeft());
+         mods.add(mod);
+      }
+      compound.put("yieldModifiers",mods);
       return compound;
    }
    
@@ -493,6 +562,14 @@ public class CapturePoint {
             infMap.put(key,influence.getDouble(key));
          }
       }
+      List<Pair<Double,Integer>> mods = new ArrayList<>();
+      if(compound.contains("yieldModifiers")){
+         NbtList modList = compound.getList("yieldModifiers", NbtElement.COMPOUND_TYPE);
+         for(NbtElement e : modList){
+            NbtCompound comp = (NbtCompound) e;
+            mods.add(new Pair<>(comp.getDouble("modifier"),comp.getInt("duration")));
+         }
+      }
       
       return new CapturePoint(
             new ChunkPos(pos.getInt("x"), pos.getInt("z")),
@@ -503,7 +580,8 @@ public class CapturePoint {
             MiscUtils.getUUID(compound.getString("id")),
             compound.getInt("storedCoins"),
             compound.getLong("auctionTime"),
-            infMap
+            infMap,
+            mods
       );
    }
 }

@@ -64,7 +64,7 @@ public class NationChunk {
    }
    
    public void setControllingNationId(String controllingNationId){
-      Nation oldNation = Nations.getNation(controllingNationId);
+      Nation oldNation = Nations.getNation(this.controllingNationId);
       if(oldNation != null){
          oldNation.getChunks().remove(this);
       }

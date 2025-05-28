@@ -7,11 +7,13 @@ import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.utils.GenericTimer;
+import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.ParticleEffectUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -41,28 +43,36 @@ public class WarManager {
    private static final HashSet<Contest> ACTIVE_CONTESTS = new HashSet<>();
    private static final HashMap<CapturePoint,ServerPlayerEntity> PENDING_CONTESTS = new HashMap<>();
    private static final HashSet<CapturePoint> COMPLETED_CAPS = new HashSet<>();
+   private static final HashMap<Nation,Integer> ATTACKS_ISSUED = new HashMap<>();
    
    private static long warStart = 0;
    private static boolean warActive = false;
+   private static boolean attackPhase = false;
+   private static int attackCycle = 0;
    
    public static NbtCompound saveWarData(NbtCompound compound){
       NbtList completedCapList = new NbtList();
       NbtCompound pendingContests = new NbtCompound();
+      NbtCompound attackCounter = new NbtCompound();
       completedCapList.addAll(COMPLETED_CAPS.stream().map(cap -> NbtString.of(cap.getId().toString())).collect(Collectors.toSet()));
       PENDING_CONTESTS.forEach((cap, player) -> pendingContests.putString(cap.getId().toString(),player.getUuidAsString()));
+      ATTACKS_ISSUED.forEach((nation, count) -> attackCounter.putInt(nation.getId(), count));
       
       compound.putLong("warStart",warStart);
       compound.putBoolean("warActive",warActive);
       compound.put("completedCaps",completedCapList);
       compound.put("pendingContests",pendingContests);
+      compound.put("attackCounter",attackCounter);
       return compound;
    }
    
    public static void loadWarData(NbtCompound compound){
       PENDING_CONTESTS.clear();
       COMPLETED_CAPS.clear();
+      ATTACKS_ISSUED.clear();
       NbtList completedCapList = compound.getList("completedCaps", NbtElement.STRING_TYPE);
       NbtCompound pendingContests = compound.getCompound("pendingContests");
+      NbtCompound attackCounter = compound.getCompound("attackCounter");
       for(String key : pendingContests.getKeys()){
          ServerPlayerEntity player = Nations.SERVER.getPlayerManager().getPlayer(UUID.fromString(pendingContests.getString(key)));
          if(player != null) PENDING_CONTESTS.put(Nations.getCapturePoint(key),player);
@@ -70,23 +80,115 @@ public class WarManager {
       for(NbtElement e : completedCapList){
          COMPLETED_CAPS.add(Nations.getCapturePoint(e.asString()));
       }
+      for(String key : attackCounter.getKeys()){
+         Nation nation = Nations.getNation(key);
+         if(nation != null){
+            ATTACKS_ISSUED.put(nation,attackCounter.getInt(key));
+         }
+      }
       
       warStart = compound.getLong("warStart");
       warActive = compound.getBoolean("warActive");
    }
    
+   public static boolean capIsContested(CapturePoint capturePoint){
+      if(!isWarActive()) return false;
+      return PENDING_CONTESTS.containsKey(capturePoint);
+   }
+   
+   public static void cancelPendingContestsFromPlayer(ServerPlayerEntity player){
+      if(!isWarActive()) return;
+      ArrayList<CapturePoint> toRemove = new ArrayList<>();
+      for(Map.Entry<CapturePoint, ServerPlayerEntity> entry : WarManager.getPendingContests().entrySet()){
+         if(entry.getValue().equals(player)){
+            toRemove.add(entry.getKey());
+         }
+      }
+      toRemove.forEach(WarManager::cancelPendingContest);
+   }
+   
+   public static void cancelPendingContest(CapturePoint capturePoint){
+      if(!PENDING_CONTESTS.containsKey(capturePoint)) return;
+      ServerPlayerEntity attacker = PENDING_CONTESTS.get(capturePoint);
+      Nation atkNation = Nations.getNation(attacker);
+      if(atkNation != null){
+         ATTACKS_ISSUED.put(atkNation,ATTACKS_ISSUED.getOrDefault(atkNation,1)-1);
+      }
+      
+      Text controllingNationText = capturePoint.getControllingNation() == null ? Text.translatable("text.nations.unclaimed_tag") : capturePoint.getControllingNation().getFormattedNameTag(false);
+      MutableText announcement = Text.translatable("text.nations.cap_duel_cancel",
+            controllingNationText,
+            capturePoint.getType().getText().formatted(Formatting.BOLD),
+            Text.translatable("text.nations.capture_point").formatted(Formatting.BOLD,capturePoint.getType().getTextColor()),
+            Text.literal(capturePoint.getChunkPos().toString()).formatted(Formatting.YELLOW,Formatting.BOLD),
+            attacker.getDisplayName()
+      ).formatted(Formatting.RED);
+      Nations.announce(announcement);
+      
+      PENDING_CONTESTS.remove(capturePoint);
+   }
+   
+   public static boolean canContestCap(CapturePoint capturePoint, ServerPlayerEntity player){
+      Nation capNation = capturePoint.getControllingNation();
+      Nation atkNation = Nations.getNation(player);
+      if(!isWarActive() || !canAttack()) return false;
+      if(capNation == null || atkNation == null) return false;
+      if(capNation.equals(atkNation)) return false;
+      if(PENDING_CONTESTS.containsKey(capturePoint)) return false;
+      if(ACTIVE_CONTESTS.stream().anyMatch(contest -> contest.capturePoint().equals(capturePoint))) return false;
+      if(COMPLETED_CAPS.contains(capturePoint)) return false;
+      int atkLimit = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_LIMIT_CFG);
+      if(ATTACKS_ISSUED.getOrDefault(atkNation,0) >= atkLimit) return false;
+      return true;
+   }
+   
    public static void startWar(){
       warStart = System.currentTimeMillis();
+      attackPhase = false;
+      attackCycle = 0;
       ACTIVE_CONTESTS.clear();
       PENDING_CONTESTS.clear();
       COMPLETED_CAPS.clear();
+      ATTACKS_ISSUED.clear();
+      int warDuration = NationsConfig.getInt(NationsRegistry.WAR_DURATION_CFG);
+      Nations.announce(Text.translatable("text.nations.war_announcement",MiscUtils.getTimeDiff(warDuration * 60000L).formatted(Formatting.BOLD,Formatting.RED)).formatted(Formatting.DARK_RED,Formatting.BOLD));
+      Nations.announce(Text.translatable("text.nations.war_reminder_1").formatted(Formatting.GOLD));
+      Nations.announce(Text.translatable("text.nations.war_reminder_2").formatted(Formatting.GOLD));
+      Nations.announce(Text.translatable("text.nations.war_reminder_3").formatted(Formatting.GOLD));
+      calculatePhase();
    }
    
    public static void endWar(){
+      ServerWorld contestWorld = Nations.SERVER.getWorld(NationsRegistry.CONTEST_DIM);
+      for(Contest contest : new ArrayList<>(ACTIVE_CONTESTS)){
+         contest.attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,contest.defender,contest.defender),contest.attacker.getHealth()*100);
+         concludeContest(Nations.SERVER,contest,contest.defender);
+      }
+      
       warActive = false;
+      attackPhase = false;
+      attackCycle = 0;
       ACTIVE_CONTESTS.clear();
       PENDING_CONTESTS.clear();
       COMPLETED_CAPS.clear();
+      ATTACKS_ISSUED.clear();
+      Nations.announce(Text.translatable("text.nations.war_end").formatted(Formatting.DARK_RED,Formatting.BOLD));
+   }
+   
+   public static void calculatePhase(){
+      if(!isWarActive()) return;
+      int warDuration = NationsConfig.getInt(NationsRegistry.WAR_DURATION_CFG);
+      int cycleDuration = warDuration / NationsConfig.getInt(NationsRegistry.WAR_CYCLES_CFG);
+      long warEnd = warStart + 60000L * warDuration;
+      long now = System.currentTimeMillis();
+      long warElapsed = now - warStart;
+      attackCycle = (int) Math.ceilDiv(warElapsed,cycleDuration);
+      long cycleMod = warElapsed % cycleDuration;
+      attackPhase = cycleMod <= (cycleDuration/2);
+   }
+   
+   public static boolean canAttack(){
+      return isWarActive() && attackPhase;
    }
    
    public static void tickWar(MinecraftServer server){
@@ -99,7 +201,60 @@ public class WarManager {
       
       if(warActive){
          tickContests(server);
+         boolean atk = attackPhase;
+         int oldCycle = attackCycle;
+         calculatePhase();
+         boolean newAtk = attackPhase;
+         int newCycle = attackCycle;
+         if(atk && !newAtk){ // Attack End
+            int cycleDuration = warDuration / NationsConfig.getInt(NationsRegistry.WAR_CYCLES_CFG);
+            Nations.announce(Text.translatable("text.nations.war_attack_end", String.format("%03.2f",cycleDuration/2.0)).formatted(Formatting.RED));
+         }else if(!atk && newAtk){ // Attack Start
+            Nations.announce(Text.translatable("text.nations.war_attack_start").formatted(Formatting.RED));
+         }
+         if(oldCycle != newCycle){
+            endWarCycle(server);
+         }
       }
+   }
+   
+   public static void endWarCycle(MinecraftServer server){
+      ServerWorld contestWorld = server.getWorld(NationsRegistry.CONTEST_DIM);
+      ServerWorld overworld = server.getOverworld();
+      for(Contest contest : new ArrayList<>(ACTIVE_CONTESTS)){
+         contest.attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,contest.defender,contest.defender),contest.attacker.getHealth()*100);
+         concludeContest(server,contest,contest.defender);
+      }
+      ACTIVE_CONTESTS.clear();
+      
+      PENDING_CONTESTS.forEach((capturePoint, attacker) -> {
+         ChunkPos capPos = capturePoint.getChunkPos();
+         Text controllingNationText = capturePoint.getControllingNation() == null ? Text.translatable("text.nations.unclaimed_tag") : capturePoint.getControllingNation().getFormattedNameTag(false);
+         Nation nation = Nations.getNation(attacker);
+         if(nation != null){
+            MutableText announcement = Text.translatable("text.nations.cap_duel_attacker_victory",
+                  controllingNationText,
+                  capturePoint.getType().getText().formatted(Formatting.BOLD),
+                  Text.translatable("text.nations.capture_point").formatted(Formatting.BOLD,capturePoint.getType().getTextColor()),
+                  Text.literal(capturePoint.getChunkPos().toString()).formatted(Formatting.YELLOW,Formatting.BOLD),
+                  attacker.getDisplayName()
+            ).formatted(Formatting.RED);
+            Nations.announce(announcement);
+            if(Nations.getChunk(capturePoint.getChunkPos()).getControllingNation() != null){
+               capturePoint.blockadeOutput();
+            }else{
+               capturePoint.transferOwnership(overworld, nation);
+            }
+         }
+         
+         COMPLETED_CAPS.add(capturePoint);
+      });
+      PENDING_CONTESTS.clear();
+   }
+   
+   public static long getWarEnd(){
+      int warDuration = NationsConfig.getInt(NationsRegistry.WAR_DURATION_CFG);
+      return warStart + 60000L * warDuration;
    }
    
    private static void tickContests(MinecraftServer server){
@@ -131,7 +286,11 @@ public class WarManager {
                   winner.getDisplayName()
             ).formatted(Formatting.RED);
             Nations.announce(announcement);
-            cap.transferOwnership(overworld, nation);
+            if(Nations.getChunk(cap.getChunkPos()).getControllingNation() != null){
+               cap.blockadeOutput();
+            }else{
+               cap.transferOwnership(overworld, nation);
+            }
          }
       }else{ // Defender win, buff output
          MutableText announcement = Text.translatable("text.nations.cap_duel_defender_victory",
@@ -142,9 +301,11 @@ public class WarManager {
                winner.getDisplayName()
          ).formatted(Formatting.RED);
          Nations.announce(announcement);
-         
-         // TODO
+         cap.buffOutput();
       }
+      
+      winner.heal(winner.getMaxHealth());
+      winner.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE,1200,4));
       
       winner.networkHandler.sendPacket(new TitleFadeS2CPacket(20, 40, 20));
       winner.networkHandler.sendPacket(new TitleS2CPacket(Text.translatable("text.nations.duel_winner").formatted(Formatting.LIGHT_PURPLE)));
@@ -168,6 +329,7 @@ public class WarManager {
       ServerWorld overworld = server.getOverworld();
       Contest record = new Contest(cap, attacker, defender);
       ChunkPos capPos = cap.getChunkPos();
+      PENDING_CONTESTS.remove(cap);
       ACTIVE_CONTESTS.add(record);
       setupDuel(server,cap);
       
@@ -229,7 +391,7 @@ public class WarManager {
       
       teardownDuel(capPos,contestWorld);
       
-      Nations.addTickTimerCallback(new GenericTimer(10, () -> {
+      Nations.addTickTimerCallback(new GenericTimer(6, () -> {
          for(Pair<BlockPos, BlockPos> duelCorner : getDuelCorners(capPos, contestWorld)){
             for(BlockPos blockPos : BlockPos.iterate(duelCorner.getLeft(), duelCorner.getRight())){
                contestWorld.setBlockState(blockPos,NationsRegistry.CONTEST_BOUNDARY_BLOCK.getDefaultState(),Block.FORCE_STATE+Block.SKIP_DROPS+Block.REDRAW_ON_MAIN_THREAD);
@@ -237,7 +399,7 @@ public class WarManager {
          }
       }));
       
-      Nations.addTickTimerCallback(new GenericTimer(20, () -> {
+      Nations.addTickTimerCallback(new GenericTimer(10, () -> {
          for(int x = -DUEL_RANGE; x <= DUEL_RANGE; x++){
             for(int z = -DUEL_RANGE; z <= DUEL_RANGE; z++){
                ChunkPos copyChunk = new ChunkPos(capPos.x+x,capPos.z+z);
@@ -312,6 +474,8 @@ public class WarManager {
       private ServerPlayerEntity defender;
       private int age;
       private boolean begun;
+      private boolean proxy;
+      private int attackOnCapTicks;
       
       public Contest(CapturePoint capturePoint, ServerPlayerEntity attacker, ServerPlayerEntity defender){
          this.capturePoint = capturePoint;
@@ -319,9 +483,11 @@ public class WarManager {
          this.defender = defender;
          this.age = 0;
          this.begun = false;
+         this.proxy = false;
       }
       
       public void tick(MinecraftServer server){
+         if(proxy) return;
          ServerWorld contestWorld = server.getWorld(NationsRegistry.CONTEST_DIM);
          ServerWorld overworld = server.getOverworld();
          ChunkPos pos = capturePoint().getChunkPos();
@@ -349,11 +515,33 @@ public class WarManager {
                player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
                ParticleEffectUtils.netherRiftTeleport(contestWorld,player.getPos(),0);
             }
+            
+            if(attacker.squaredDistanceTo(capturePoint.getBeaconPos().toCenterPos().add(0,3,0)) <= 25){
+               attackOnCapTicks++;
+            }else if(attackOnCapTicks > 0){
+               attackOnCapTicks -= Math.min(attackOnCapTicks,5);
+            }
+            
+            int capDuration = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_CAPTURE_DURATION_CFG); // seconds
+            int contestDuration = NationsConfig.getInt(NationsRegistry.WAR_CONTEST_DURATION_CFG); // minutes
+            if(age > (contestDuration * 1200)){ // Timeout - Defender Victory
+               attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defender,defender),attacker.getHealth()*100);
+            }
+            if(attackOnCapTicks > (capDuration * 20)){ // Capture - Attacker Victory
+               defender.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attacker,attacker),defender.getHealth()*100);
+            }
+            
+            age++;
          }
+      }
+      
+      public void setProxy(){
+         this.proxy = true;
       }
       
       public void setBegun(boolean begun){
          this.begun = begun;
+         
       }
       
       public CapturePoint capturePoint(){

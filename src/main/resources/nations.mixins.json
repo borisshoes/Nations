@@ -44,6 +44,7 @@
     "PistonMixin",
     "PlayerEntityMixin",
     "PlayerManagerMixin",
+    "PolymerBlockUtilsMixin",
     "PortalForcerMixin",
     "ProjectileMixin",
     "RecipeUnlockerMixin",
