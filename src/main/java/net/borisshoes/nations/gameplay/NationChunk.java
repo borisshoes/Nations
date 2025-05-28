@@ -48,6 +48,7 @@ public class NationChunk {
       this.anchored = anchored;
       this.explosionsOverridden = explosionsOverridden;
       this.farmlandLvl = farmlandLvl;
+      this.arena = arena;
       this.coinMultiplier = coinMultiplier;
    }
    
