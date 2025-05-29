@@ -9,7 +9,9 @@ import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.gameplay.CapturePoint;
 import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.gameplay.ResourceType;
+import net.borisshoes.nations.gameplay.WarManager;
 import net.borisshoes.nations.gui.core.GuiHelper;
+import net.borisshoes.nations.integration.DynmapCalls;
 import net.borisshoes.nations.items.GraphicalItem;
 import net.borisshoes.nations.items.ResourceBullionItem;
 import net.borisshoes.nations.utils.MiscUtils;
@@ -24,6 +26,8 @@ import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -54,12 +58,29 @@ public class CapturePointGui extends SimpleGui implements InventoryChangedListen
    public boolean onAnyClick(int index, ClickType type, SlotActionType action){
       if(index == 4){
          if(this.mode == Mode.DEFEND){
-            // TODO
+            if(WarManager.capIsContested(capturePoint)){
+               WarManager.defendContest(capturePoint,player);
+            }else{
+               player.sendMessage(Text.translatable("text.nations.war_not_contested").formatted(Formatting.RED));
+               close();
+            }
          }else if(this.mode == Mode.COLLECT){
             capturePoint.collectCoins(player.getServer().getOverworld());
             close();
          }else if(this.mode == Mode.CONTEST){
-            // TODO
+            boolean canContest = WarManager.canContestCap(capturePoint,player);
+            if(canContest){
+               int cost = capturePoint.calculateAttackCost(Nations.getNation(player));
+               if(MiscUtils.removeItems(player,NationsRegistry.GROWTH_COIN_ITEM,cost)){
+                  WarManager.addPendingContest(capturePoint,player);
+                  close();
+               }else{
+                  player.sendMessage(Text.translatable("text.nations.not_enough_growth_coins").formatted(Formatting.RED,Formatting.ITALIC));
+               }
+            }else{
+               player.sendMessage(Text.translatable("text.nations.war_cannot_contest").formatted(Formatting.RED));
+               close();
+            }
          }
       }
       
@@ -107,9 +128,17 @@ public class CapturePointGui extends SimpleGui implements InventoryChangedListen
       GuiHelper.outlineGUI(this, getGuiColor(), Text.translatable("gui.nations.cap_contest_border").formatted(capturePoint.getType().getTextColor()));
       GuiElementBuilder center = new GuiElementBuilder(Items.DIAMOND_SWORD).hideDefaultTooltip();
       center.setName(Text.translatable("gui.nations.cap_contest").formatted(capturePoint.getType().getTextColor()));
-      Text lore = Text.literal("")
-            .append(Text.translatable("gui.nations.click").formatted(Formatting.LIGHT_PURPLE))
-            .append(Text.translatable("gui.nations_cap_contest_sub").formatted(Formatting.DARK_PURPLE));
+      boolean canContest = WarManager.canContestCap(capturePoint,player);
+      Text lore;
+      if(canContest){
+         int cost = capturePoint.calculateAttackCost(Nations.getNation(player));
+         lore = Text.literal("")
+               .append(Text.translatable("gui.nations.click").formatted(Formatting.LIGHT_PURPLE))
+               .append(Text.translatable("gui.nations_cap_contest_sub",Text.literal(String.format("%,d",cost)).formatted(Formatting.GREEN)).formatted(Formatting.DARK_PURPLE));
+      }else{
+         lore = Text.translatable("text.nations.war_cannot_contest").formatted(Formatting.RED);
+      }
+      
       center.addLoreLine(lore);
       setSlot(4,center);
    }

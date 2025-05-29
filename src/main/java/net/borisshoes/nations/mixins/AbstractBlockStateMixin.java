@@ -32,7 +32,7 @@ public abstract class AbstractBlockStateMixin {
    @ModifyReturnValue(method = "getHardness", at = @At("RETURN"))
    private float nations_contestBlockHardness(float original, BlockView world, BlockPos pos){
       if(world instanceof ServerWorld serverWorld && serverWorld.getRegistryKey().equals(NationsRegistry.CONTEST_DIM)){
-         return Math.min(original,15);
+         return Math.min(original,10);
       }
       return original;
    }

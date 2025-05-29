@@ -1265,4 +1265,29 @@ public class NationsCommands {
          return -1;
       }
    }
+   
+   public static int modifyCapturePoint(CommandContext<ServerCommandSource> ctx, double modifier, int duration, ChunkSectionPos chunkPos){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         CapturePoint cap = Nations.getCapturePoint(chunkPos.toChunkPos());
+         
+         if(cap == null){
+            src.sendError(Text.translatable("text.nations.no_cap_error"));
+            return -1;
+         }
+         
+         if(duration == 0){
+            cap.clearOutputModifier();
+            src.sendMessage(Text.translatable("text.nations.cleared_cap_modifier"));
+         }else{
+            cap.addOutputModifier(modifier,duration);
+            src.sendMessage(Text.translatable("text.nations.added_cap_modifier",modifier,duration));
+         }
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
 }

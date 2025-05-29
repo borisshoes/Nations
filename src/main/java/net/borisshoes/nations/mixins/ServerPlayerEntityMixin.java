@@ -96,6 +96,7 @@ public class ServerPlayerEntityMixin {
       WarManager.Contest completedContest = null;
       ServerPlayerEntity winner = null;
       for(WarManager.Contest contest : WarManager.getActiveContests()){
+         if(contest.isProxy()) continue;
          ServerPlayerEntity attacker = contest.attacker();
          ServerPlayerEntity defender = contest.defender();
          if(!player.equals(attacker) && !player.equals(defender)) continue;

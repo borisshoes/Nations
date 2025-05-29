@@ -308,6 +308,7 @@ public class NationsLand {
          if(message) sendPermissionMessage(player,pos);
          return false;
       }
+      if(isWartime()) return true;
       ChunkPos chunkPos = new ChunkPos(pos);
       boolean isClaimed = Nations.isClaimedAgainst(chunkPos, player);
       boolean isInfluenced = Nations.isInfluencedAgainst(chunkPos, player);
@@ -372,7 +373,7 @@ public class NationsLand {
          if(message) sendPermissionMessage(player,pos);
          return false;
       }
-      if(Nations.isWartime()) return true;
+      if(Nations.isWartime() && entity instanceof ServerPlayerEntity) return true;
       
       if(entity instanceof ServerPlayerEntity otherPlayer){
          if(Nations.isInfluencedAgainst(new ChunkPos(pos),player)){
@@ -407,7 +408,7 @@ public class NationsLand {
       if(isSpawnChunk(pos)){
          return false;
       }
-      if(Nations.isWartime()) return true;
+      if(Nations.isWartime() && entity instanceof ServerPlayerEntity) return true;
       if(!Nations.isClaimed(new ChunkPos(pos)).isEmpty()){
          return false;
       }

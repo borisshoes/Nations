@@ -249,7 +249,7 @@ public class InteractionEvents {
       ActionResult canAttack = attackSimple(player, entity);
       if(entity instanceof ServerPlayerEntity target && player instanceof ServerPlayerEntity serverPlayer){
          if(canAttack != ActionResult.FAIL){
-            Nations.getPlayer(target).resetCombatLog(player);
+            Nations.getPlayer(target).resetCombatLog(serverPlayer);
             Nations.getPlayer(serverPlayer).resetCombatLog(target);
          }
       }

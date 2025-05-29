@@ -11,6 +11,7 @@ import net.minecraft.util.DyeColor;
 import net.minecraft.util.math.ChunkSectionPos;
 
 import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
+import static com.mojang.brigadier.arguments.DoubleArgumentType.getDouble;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.LongArgumentType.getLong;
@@ -103,6 +104,13 @@ public class CommandRegisterCallback {
                         .then(argument("x", integer())
                               .then(argument("z", integer())
                                     .executes(context -> NationsCommands.transferCapturePoint(context, getString(context, "nation_id"), ChunkSectionPos.from(getInteger(context,"x"),0,getInteger(context,"z"))))))))
+            .then(literal("modifyCap").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("modifier", doubleArg())
+                        .then(argument("duration", integer(0))
+                              .executes(context -> NationsCommands.modifyCapturePoint(context, getDouble(context, "modifier"), getInteger(context,"duration"), ChunkSectionPos.from(context.getSource().getPosition())))
+                              .then(argument("x", integer())
+                                    .then(argument("z", integer())
+                                          .executes(context -> NationsCommands.modifyCapturePoint(context, getDouble(context, "modifier"), getInteger(context,"duration"), ChunkSectionPos.from(getInteger(context,"x"),0,getInteger(context,"z")))))))))
       );
       
       dispatcher.register(literal("lc").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.LOCAL)));

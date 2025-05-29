@@ -11,6 +11,7 @@
     "ArcanaProfileMixin",
     "ArcaneNotesMixin",
     "ArchetypesWitherMixin",
+    "BlockItemMixin",
     "BlockMixin",
     "BoneMealItemMixin",
     "BrewingStandEntityMixin",

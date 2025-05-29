@@ -207,11 +207,11 @@ public class NationsProfileComponent implements INationsProfileComponent{
    }
    
    @Override
-   public void resetCombatLog(PlayerEntity player){
+   public void resetCombatLog(PlayerEntity attacker){
       boolean inCombat = this.combatLog > 0;
       int duration = NationsConfig.getInt(NationsRegistry.COMBAT_LOG_DURATION_CFG);
       this.combatLog = duration * 20;
-      this.combatLogPlayerId = player.getUuidAsString();
+      this.combatLogPlayerId = attacker.getUuidAsString();
       if(!inCombat && combatLog > 0){
          player.sendMessage(Text.translatable("text.nations.combat_warning",duration).formatted(Formatting.BOLD,Formatting.RED),false);
       }

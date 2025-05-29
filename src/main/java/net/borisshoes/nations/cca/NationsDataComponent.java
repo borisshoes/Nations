@@ -177,7 +177,6 @@ public class NationsDataComponent implements INationsDataComponent {
          if(nation != null) nations.put(nation.getId(),nation);
       }
       capturePoints.addAll(capsList.stream().map(e -> CapturePoint.loadFromNbt((NbtCompound) e)).collect(Collectors.toSet()));
-      WarManager.loadWarData(nbtCompound.getCompound("warData"));
    }
    
    @Override
@@ -194,7 +193,6 @@ public class NationsDataComponent implements INationsDataComponent {
       nbtCompound.put("capturePoints",capsList);
       nbtCompound.put("chunks",chunkList);
       nbtCompound.put("riftData",riftData);
-      nbtCompound.put("warData",WarManager.saveWarData(new NbtCompound()));
       nbtCompound.putBoolean("initialized",worldInitialized);
       nbtCompound.putLong("nextWar",nextWar);
       nbtCompound.putLong("nextRift",nextRift);

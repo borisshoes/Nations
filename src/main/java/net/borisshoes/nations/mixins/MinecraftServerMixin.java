@@ -15,7 +15,6 @@ public class MinecraftServerMixin {
    
    @Redirect(method = "createWorlds", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/border/WorldBorder;addListener(Lnet/minecraft/world/border/WorldBorderListener;)V"))
    private void nations_decoupleBorders(WorldBorder instance, WorldBorderListener listener){
-      System.out.println("Decoupled World Borders!");
       // Blank Redirect
    }
    
@@ -58,6 +57,5 @@ public class MinecraftServerMixin {
             }
          });
       }
-      System.out.println("Decoupled World Border Listeners!");
    }
 }

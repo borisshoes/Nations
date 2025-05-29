@@ -460,7 +460,7 @@
   "gui.nations.transfer_cap_gui_title": "Transfer Capture Point %s from %s",
   "gui.nations.transfer_cap_gui_title_short": "Transfer Capture Point",
   "gui.nations.voucher_go": "Roll the Odds!",
-  "gui.nations_cap_contest_sub": " to start contesting this Capture Point",
+  "gui.nations_cap_contest_sub": " to start contesting this Capture Point for %s Growth Coins",
   "gui.nations_cap_defend_sub": " to defend this Capture Point",
   "item.nations.bug_voucher": "Bug Voucher",
   "item.nations.growth_bullion": "Growth Bullion",
@@ -712,5 +712,11 @@
   "text.nations.capture_point_yield_modified": "Daily Yield: %s Coins (%sx)",
   "text.nations.war_cannot_contest": "You cannot contest this Capture Point right now",
   "text.nations.cap_duel_cancel": "The Contest for the %s %s %s at %s by %s has been cancelled!",
-  "text.nations.no_cap_error": "No Capture Point is present"
+  "text.nations.no_cap_error": "No Capture Point is present",
+  "text.nations.cap_duel_contested": "The %s %s %s at %s is being contested by %s!",
+  "text.nations.war_not_contested": "This Capture Point is not contested!",
+  "text.nations.capture_progress": "Capture Progress: %s",
+  "text.nations.contest_duration_bar": "\uD83D\uDDE1 Contest Time Remaining: %s \uD83D\uDDE1",
+  "text.nations.added_cap_modifier": "Added output modifier of %sx for %s Hourly Ticks",
+  "text.nations.cleared_cap_modifier": "Cleared output modifiers"
 }

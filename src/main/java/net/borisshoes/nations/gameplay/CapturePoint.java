@@ -73,6 +73,7 @@ public class CapturePoint {
       this.storedCoins = storedCoins;
       this.auctionStartTime = auctionStartTime;
       this.influence = influence;
+      this.yieldModifiers = yieldModifiers;
    }
    
    public int getRawYield(){
@@ -161,6 +162,14 @@ public class CapturePoint {
    public void blockadeOutput(){
       int duration = NationsConfig.getInt(NationsRegistry.WAR_BLOCKADE_DURATION);
       yieldModifiers.add(new Pair<>(0.0,duration));
+   }
+   
+   public void addOutputModifier(double modifier, int duration){
+      yieldModifiers.add(new Pair<>(modifier,duration));
+   }
+   
+   public void clearOutputModifier(){
+      yieldModifiers.clear();
    }
    
    public void collectCoins(ServerWorld world){
@@ -282,12 +291,12 @@ public class CapturePoint {
    }
    
    public int calculateAttackCost(Nation attacking){
-      int attackCost = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_COST_CFG);
-      if(this.getControllingNation() == null) return attackCost;
+      double attackCost = NationsConfig.getDouble(NationsRegistry.WAR_ATTACK_COST_CFG);
+      if(this.getControllingNation() == null) return (int) (attackCost*getRawYield());
       Nation owner = getControllingNation();
       Pair<ChunkPos,Double> attackerMod = calculateNearestInfluence(attacking);
       Pair<ChunkPos,Double> defenderMod = calculateNearestInfluence(owner);
-      if(Nations.getChunk(getChunkPos()).getControllingNation() != null) return attackCost;
+      if(Nations.getChunk(getChunkPos()).getControllingNation() != null) return (int) (attackCost*getRawYield());
       double costModifier = Math.max(0.25,(defenderMod.getRight() - attackerMod.getRight()) / 2.0 + 1);
       return (int) (costModifier*attackCost*getRawYield());
    }
