@@ -1,6 +1,7 @@
 package net.borisshoes.nations.callbacks;
 
 import net.borisshoes.arcananovum.ArcanaRegistry;
+import net.borisshoes.arcananovum.utils.ArcanaItemUtils;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
@@ -99,7 +100,7 @@ public class TickCallback {
                PlayerInventory inv = player.getInventory();
                for(int i=0; i<inv.size();i++){
                   ItemStack item = inv.getStack(i);
-                  if(item.hasEnchantments() && !profile.bypassesClaims()){
+                  if(item.hasEnchantments() && !profile.bypassesClaims() && !ArcanaItemUtils.isArcane(item)){
                      ItemEnchantmentsComponent enchants = item.getEnchantments();
                      ItemEnchantmentsComponent.Builder newEnchants = new ItemEnchantmentsComponent.Builder(enchants);
                      newEnchants.remove(ench -> {

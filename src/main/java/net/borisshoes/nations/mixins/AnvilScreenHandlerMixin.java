@@ -1,6 +1,7 @@
 package net.borisshoes.nations.mixins;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import net.borisshoes.arcananovum.utils.ArcanaItemUtils;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.gameplay.Nation;
@@ -37,6 +38,7 @@ public class AnvilScreenHandlerMixin {
       
       if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem())) return;
       if(!(player instanceof ServerPlayerEntity serverPlayer)) return;
+      if(ArcanaItemUtils.isArcane(stack)) return;
       Nation nation = Nations.getNation(serverPlayer);
       if(nation == null) return;
       boolean canCraft = nation.canCraft(stack.getItem());

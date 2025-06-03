@@ -1,6 +1,7 @@
 package net.borisshoes.nations.mixins;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import net.borisshoes.arcananovum.utils.ArcanaItemUtils;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
@@ -24,6 +25,7 @@ public class ItemStackMixin {
       ItemEnchantmentsComponent enchants = stack.getEnchantments();
       int extra = NationsConfig.getInt(NationsRegistry.STACK_OVERDAMAGE_CFG);
       int count = 1;
+      if(ArcanaItemUtils.isArcane(stack)) return original;
       if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem())) return original;
       if(!(player instanceof ServerPlayerEntity serverPlayer)) return original;
       Nation nation = Nations.getNation(serverPlayer);
