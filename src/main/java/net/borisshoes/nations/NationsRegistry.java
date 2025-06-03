@@ -66,6 +66,7 @@ public class NationsRegistry {
    
    public static final TagKey<Item> INFLUENCE_PROTECTED_ITEMS = TagKey.of(RegistryKeys.ITEM, Identifier.of(MOD_ID,"influence_protected_items"));
    public static final TagKey<Item> CLAIM_PROTECTED_ITEMS = TagKey.of(RegistryKeys.ITEM, Identifier.of(MOD_ID,"claim_protected_items"));
+   public static final TagKey<Item> COIN_ITEMS = TagKey.of(RegistryKeys.ITEM, Identifier.of(MOD_ID,"coin_items"));
    
    public static final TagKey<Block> INFLUENCE_PROTECTED_BLOCKS = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID,"influence_protected_blocks"));
    public static final TagKey<Block> CLAIM_PROTECTED_BLOCKS = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID,"claim_protected_blocks"));

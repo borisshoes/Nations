@@ -31,6 +31,12 @@ public class ItemTagGenerator  extends FabricTagProvider<Item> {
             claimItemBuilder.add(item);
          }
       });
+      
+      getOrCreateTagBuilder(NationsRegistry.COIN_ITEMS)
+            .add(NationsRegistry.GROWTH_COIN_ITEM)
+            .add(NationsRegistry.MATERIAL_COIN_ITEM)
+            .add(NationsRegistry.RESEARCH_COIN_ITEM)
+      ;
    }
    
    @Override
