@@ -12,17 +12,10 @@ import net.borisshoes.nations.utils.ParticleEffectUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.SpawnerBlock;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.BlockStateComponent;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.CommandBossBar;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -41,7 +34,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.TeleportTarget;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static net.borisshoes.nations.Nations.MOD_ID;
 
@@ -50,7 +42,7 @@ public class WarManager {
    public static final int DUEL_RANGE = 2;
    private static final HashSet<Contest> ACTIVE_CONTESTS = new HashSet<>();
    private static final HashMap<CapturePoint,ServerPlayerEntity> PENDING_CONTESTS = new HashMap<>();
-   private static final HashSet<CapturePoint> COMPLETED_CAPS = new HashSet<>();
+   private static final HashMap<CapturePoint,List<Nation>> LOCKED_CAPS = new HashMap<>();
    private static final HashMap<Nation,Integer> ATTACKS_ISSUED = new HashMap<>();
    
    private static long warStart = 0;
@@ -58,17 +50,51 @@ public class WarManager {
    private static boolean attackPhase = false;
    private static int attackCycle = 0;
    
+   private static void lockCapturePoint(CapturePoint capturePoint){
+      LOCKED_CAPS.put(capturePoint,new ArrayList<>(Nations.getNations()));
+   }
+   
+   private static void lockCapturePoint(CapturePoint capturePoint, Nation nation){
+      List<Nation> locks = LOCKED_CAPS.getOrDefault(capturePoint,new ArrayList<>());
+      locks.add(nation);
+      LOCKED_CAPS.put(capturePoint,locks);
+   }
+   
+   private static boolean isLocked(CapturePoint capturePoint, ServerPlayerEntity player){
+      Nation atkNation = Nations.getNation(player);
+      if(atkNation == null) return false;
+      List<Nation> locks = LOCKED_CAPS.getOrDefault(capturePoint,new ArrayList<>());
+      return locks.contains(atkNation);
+   }
+   
    public static boolean capIsContested(CapturePoint capturePoint){
       if(!isWarActive()) return false;
       return PENDING_CONTESTS.containsKey(capturePoint);
    }
    
    public static void cancelPendingContestsFromPlayer(ServerPlayerEntity player){
+      cancelPendingContestsFromPlayer(player,null);
+   }
+   
+   public static void cancelPendingContestsFromPlayer(ServerPlayerEntity player, ServerPlayerEntity killer){
       if(!isWarActive()) return;
+      Nation killerNation = null;
+      if(killer != null){
+         killerNation = Nations.getNation(killer);
+      }
       ArrayList<CapturePoint> toRemove = new ArrayList<>();
       for(Map.Entry<CapturePoint, ServerPlayerEntity> entry : WarManager.getPendingContests().entrySet()){
+         CapturePoint cap = entry.getKey();
          if(entry.getValue().equals(player)){
-            toRemove.add(entry.getKey());
+            toRemove.add(cap);
+         }
+         if(killerNation != null){
+            Nation owningNation = cap.getControllingNation();
+            if(owningNation != null && owningNation.equals(killerNation)){
+               if(Nations.getNation(player) != null){
+                  lockCapturePoint(cap,Nations.getNation(player));
+               }
+            }
          }
       }
       toRemove.forEach(WarManager::cancelPendingContest);
@@ -139,7 +165,7 @@ public class WarManager {
       if(capNation.equals(atkNation)) return false;
       if(PENDING_CONTESTS.containsKey(capturePoint)) return false;
       if(ACTIVE_CONTESTS.stream().anyMatch(contest -> contest.capturePoint().equals(capturePoint))) return false;
-      if(COMPLETED_CAPS.contains(capturePoint)) return false;
+      if(isLocked(capturePoint,player)) return false;
       if(PENDING_CONTESTS.entrySet().stream().anyMatch(entry -> entry.getValue().equals(player) && entry.getKey().getControllingNation() != null && !entry.getKey().getControllingNation().equals(capNation))) return false;
       int atkLimit = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_LIMIT_CFG);
       if(ATTACKS_ISSUED.getOrDefault(atkNation,0) >= atkLimit) return false;
@@ -153,7 +179,7 @@ public class WarManager {
       warActive = true;
       ACTIVE_CONTESTS.clear();
       PENDING_CONTESTS.clear();
-      COMPLETED_CAPS.clear();
+      LOCKED_CAPS.clear();
       ATTACKS_ISSUED.clear();
       int warDuration = NationsConfig.getInt(NationsRegistry.WAR_DURATION_CFG);
       Nations.announce(Text.translatable("text.nations.war_announcement",MiscUtils.getTimeDiff(warDuration * 60000L).formatted(Formatting.BOLD,Formatting.RED)).formatted(Formatting.DARK_RED,Formatting.BOLD));
@@ -237,8 +263,7 @@ public class WarManager {
                capturePoint.transferOwnership(overworld, nation);
             }
          }
-         
-         COMPLETED_CAPS.add(capturePoint);
+         lockCapturePoint(capturePoint);
       });
       PENDING_CONTESTS.clear();
    }
@@ -273,7 +298,7 @@ public class WarManager {
       
       for(Contest proxy : proxies){
          CapturePoint proxyCap = proxy.capturePoint;
-         COMPLETED_CAPS.add(proxyCap);
+         lockCapturePoint(proxyCap);
          ACTIVE_CONTESTS.remove(proxy);
          
          Text controllingNationText = proxyCap.getControllingNation() == null ? Text.translatable("text.nations.unclaimed_tag") : proxyCap.getControllingNation().getFormattedNameTag(false);
@@ -479,11 +504,6 @@ public class WarManager {
       return PENDING_CONTESTS;
    }
    
-   public static HashSet<CapturePoint> getCompletedCaps(){
-      return COMPLETED_CAPS;
-   }
-   
-   
    public static class Contest{
       private final CapturePoint capturePoint;
       private final ServerPlayerEntity attacker;
@@ -518,13 +538,13 @@ public class WarManager {
             if(players.contains(attacker)){
                players.remove(attacker);
             }else{ // Defender victory
-               attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defender,defender),attacker.getHealth()*100);
+               attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defender),attacker.getHealth()*100);
             }
             
             if(players.contains(defender)){
                players.remove(defender);
             }else{ // Attacker victory
-               defender.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attacker,attacker),defender.getHealth()*100);
+               defender.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attacker),defender.getHealth()*100);
             }
             
             for(ServerPlayerEntity player : players){ // Interlopers
@@ -543,10 +563,10 @@ public class WarManager {
             int capDuration = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_CAPTURE_DURATION_CFG); // seconds
             int contestDuration = NationsConfig.getInt(NationsRegistry.WAR_CONTEST_DURATION_CFG); // minutes
             if(age > (contestDuration * 1200)){ // Timeout - Defender Victory
-               attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defender,defender),attacker.getHealth()*100);
+               attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defender),attacker.getHealth()*100);
             }
             if(attackOnCapTicks > (capDuration * 20)){ // Capture - Attacker Victory
-               defender.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attacker,attacker),defender.getHealth()*100);
+               defender.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attacker),defender.getHealth()*100);
             }
             
             if(attackOnCapTicks > 0){

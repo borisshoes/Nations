@@ -240,6 +240,8 @@ public class ShopUtils {
       offers.add(getNormalSell(Items.CRACKED_POLISHED_BLACKSTONE_BRICKS,99));
       offers.add(getNormalSell(Items.GILDED_BLACKSTONE,250));
       
+      addBlockTagOffer(BlockTags.WOOL,99);
+      
       addBlockTagOffer(BlockTags.TERRACOTTA,terracottaPrice);
       
       offers.add(getNormalSell(Items.WHITE_GLAZED_TERRACOTTA,terracottaPrice));
@@ -278,6 +280,8 @@ public class ShopUtils {
       offers.add(getNormalSell(Items.GRAY_STAINED_GLASS,glassPrice));
       offers.add(getNormalSell(Items.LIGHT_GRAY_STAINED_GLASS,glassPrice));
       offers.add(getNormalSell(Items.GLASS,glassPrice));
+      
+      addBlockTagOffer(BlockTags.CONCRETE_POWDER,concretePrice);
       
       offers.add(getNormalSell(Items.WHITE_CONCRETE,concretePrice));
       offers.add(getNormalSell(Items.ORANGE_CONCRETE,concretePrice));

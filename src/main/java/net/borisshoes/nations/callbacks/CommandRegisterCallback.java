@@ -111,6 +111,14 @@ public class CommandRegisterCallback {
                               .then(argument("x", integer())
                                     .then(argument("z", integer())
                                           .executes(context -> NationsCommands.modifyCapturePoint(context, getDouble(context, "modifier"), getInteger(context,"duration"), ChunkSectionPos.from(getInteger(context,"x"),0,getInteger(context,"z")))))))))
+            .then(literal("setResearchTierRate").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("tier",integer(0))
+                        .then(argument("rate",integer(1))
+                              .executes(context -> NationsCommands.editResearchTierRate(context, getInteger(context,"tier"), getInteger(context,"rate"))))))
+            .then(literal("setResearchTierCost").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("tier",integer(0))
+                        .then(argument("cost",integer(1))
+                              .executes(context -> NationsCommands.editResearchTierCost(context, getInteger(context,"tier"), getInteger(context,"cost"))))))
       );
       
       dispatcher.register(literal("lc").executes(context -> NationsCommands.changeChatChannel(context, ChatChannel.LOCAL)));
@@ -141,6 +149,10 @@ public class CommandRegisterCallback {
                   .executes(NationsCommands::leaderboard))
             .then(literal("toggleTrespassAlerts")
                   .executes(NationsCommands::toggleTrespassAlerts))
+            .then(literal("defend").requires(source -> source.hasPermissionLevel(2))
+                  .then(argument("x", integer())
+                        .then(argument("z", integer())
+                              .executes(context -> NationsCommands.defendCapturePoint(context, ChunkSectionPos.from(getInteger(context,"x"),0,getInteger(context,"z")))))))
       );
       
       dispatcher.register(Nations.CONFIG.generateCommand());

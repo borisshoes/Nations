@@ -1,14 +1,17 @@
 package net.borisshoes.nations.cca;
 
+import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.gameplay.CapturePoint;
 import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.gameplay.NationChunk;
 import net.borisshoes.nations.gameplay.WarManager;
+import net.borisshoes.nations.utils.MiscUtils;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.util.math.ChunkPos;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,6 +30,8 @@ public class NationsDataComponent implements INationsDataComponent {
    private final HashMap<String, Nation> nations = new HashMap<>();
    private final Set<CapturePoint> capturePoints = new HashSet<>();
    private final HashMap<ChunkPos, NationChunk> nationChunks = new HashMap<>();
+   
+   private final HashMap<UUID, UUID> killOnRelog = new HashMap<>();
    
    @Override
    public boolean isWorldInitialized(){
@@ -149,14 +154,31 @@ public class NationsDataComponent implements INationsDataComponent {
    }
    
    @Override
+   public @Nullable UUID shouldKillPlayerOnRelog(UUID playerId){
+      return killOnRelog.getOrDefault(playerId,null);
+   }
+   
+   @Override
+   public void addKillOnRelog(UUID playerId, UUID killer){
+      killOnRelog.put(playerId,killer);
+   }
+   
+   @Override
+   public void removeKillOnRelog(UUID playerId){
+      killOnRelog.remove(playerId);
+   }
+   
+   @Override
    public void readFromNbt(NbtCompound nbtCompound, RegistryWrapper.WrapperLookup wrapperLookup){
       nations.clear();
       capturePoints.clear();
       nationChunks.clear();
+      killOnRelog.clear();
       
       NbtList nationList = nbtCompound.getList("nations", NbtElement.COMPOUND_TYPE);
       NbtList capsList = nbtCompound.getList("capturePoints", NbtElement.COMPOUND_TYPE);
       NbtList chunkList = nbtCompound.getList("chunks", NbtElement.COMPOUND_TYPE);
+      NbtCompound killComp = nbtCompound.getCompound("killOnRelog");
       worldInitialized = nbtCompound.getBoolean("initialized");
       if(nbtCompound.contains("nextWar")) nextWar = nbtCompound.getLong("nextWar");
       if(nbtCompound.contains("nextRift")) nextRift = nbtCompound.getLong("nextRift");
@@ -164,6 +186,14 @@ public class NationsDataComponent implements INationsDataComponent {
       if(nbtCompound.contains("lastHourTick")) lastHourTick = nbtCompound.getLong("lastHourTick");
       if(nbtCompound.contains("lastTimeCheck")) lastTimeCheck = nbtCompound.getLong("lastTimeCheck");
       if(nbtCompound.contains("riftData")) this.riftData = nbtCompound.getCompound("riftData");
+      
+      for(String key : killComp.getKeys()){
+         UUID player = MiscUtils.getUUID(key);
+         UUID killer = MiscUtils.getUUID(killComp.getString(key));
+         if(!player.toString().equals(Nations.BLANK_UUID) && !killer.toString().equals(Nations.BLANK_UUID)){
+            killOnRelog.put(player,killer);
+         }
+      }
       
       for(NbtElement e : chunkList){
          NbtCompound chunkComp = (NbtCompound) e;
@@ -184,10 +214,12 @@ public class NationsDataComponent implements INationsDataComponent {
       NbtList nationList = new NbtList();
       NbtList capsList = new NbtList();
       NbtList chunkList = new NbtList();
+      NbtCompound killComp = new NbtCompound();
       
       nationList.addAll(nations.values().stream().map(nation -> nation.saveToNbt(new NbtCompound(), wrapperLookup)).collect(Collectors.toSet()));
       capsList.addAll(capturePoints.stream().map(capturePoint -> capturePoint.saveToNbt(new NbtCompound())).collect(Collectors.toSet()));
       chunkList.addAll(nationChunks.values().stream().map(nationChunk -> nationChunk.saveToNbt(new NbtCompound())).collect(Collectors.toSet()));
+      killOnRelog.forEach((player, killer) -> killComp.putString(player.toString(),killer.toString()));
       
       nbtCompound.put("nations",nationList);
       nbtCompound.put("capturePoints",capsList);

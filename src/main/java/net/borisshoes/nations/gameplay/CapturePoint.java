@@ -35,7 +35,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import java.util.*;
-import java.util.stream.Stream;
 
 public class CapturePoint {
    
@@ -160,7 +159,7 @@ public class CapturePoint {
    }
    
    public void blockadeOutput(){
-      int duration = NationsConfig.getInt(NationsRegistry.WAR_BLOCKADE_DURATION);
+      int duration = NationsConfig.getInt(NationsRegistry.WAR_BLOCKADE_DURATION_CFG);
       yieldModifiers.add(new Pair<>(0.0,duration));
    }
    

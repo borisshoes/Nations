@@ -18,6 +18,7 @@ import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.NationsColors;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.DyedColorComponent;
+import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.InventoryChangedListener;
 import net.minecraft.inventory.SimpleInventory;

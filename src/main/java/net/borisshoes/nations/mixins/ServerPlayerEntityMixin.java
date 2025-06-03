@@ -10,6 +10,7 @@ import net.borisshoes.nations.gameplay.CapturePoint;
 import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.gameplay.WarManager;
 import net.borisshoes.nations.land.NationsLand;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -90,8 +91,13 @@ public class ServerPlayerEntityMixin {
             }
          }
       }
+      LivingEntity adversary = player.getPrimeAdversary();
+      if(adversary instanceof ServerPlayerEntity killer){
+         WarManager.cancelPendingContestsFromPlayer(player, killer);
+      }else{
+         WarManager.cancelPendingContestsFromPlayer(player);
+      }
       
-      WarManager.cancelPendingContestsFromPlayer(player);
       
       WarManager.Contest completedContest = null;
       ServerPlayerEntity winner = null;

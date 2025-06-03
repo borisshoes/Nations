@@ -51,8 +51,6 @@ public class Nations implements ModInitializer {
    private static final Logger LOGGER = LogManager.getLogger("Nations");
    public static final ArrayList<TickTimerCallback> SERVER_TIMER_CALLBACKS = new ArrayList<>();
    public static final ArrayList<Pair<ServerWorld,TickTimerCallback>> WORLD_TIMER_CALLBACKS = new ArrayList<>();
-   
-   public static MinecraftServer SERVER = null;
    public static final boolean DEV_MODE = true;
    private static final String CONFIG_NAME = "Nations.properties";
    private static final String SHOP_NAME = "NationsShop.txt";
@@ -62,11 +60,14 @@ public class Nations implements ModInitializer {
    public static final Identifier EventPhase = Identifier.of(MOD_ID, "events");
    public static final HashMap<ResourceType, StructurePlacer.Structure> CAPTURE_POINT_STRUCTURES = new HashMap<>();
    public static final HashMap<Nation, Set<RegistryKey<ResearchTech>>> TECH_TRACKER = new HashMap<>();
+   public static final HashMap<UUID,Integer> LOGOUT_TRACKER = new HashMap<>();
+   public static MinecraftServer SERVER = null;
    public static StructurePlacer.Structure NATION_STRUCTURE;
    public static ConfigUtils CONFIG;
    public static ShopUtils SHOP;
    public static int DEBUG_VALUE = 0;
    public static NetherRift LAST_RIFT;
+   public static boolean SHUTTING_DOWN = false;
    
    @Override
    public void onInitialize(){
@@ -89,6 +90,7 @@ public class Nations implements ModInitializer {
       UseItemCallback.EVENT.register(InteractionEvents::useItem);
       ServerLifecycleEvents.SERVER_STARTING.register(Nations::serverStarting);
       ServerLifecycleEvents.SERVER_STARTED.register(Nations::serverStarted);
+      ServerLifecycleEvents.SERVER_STOPPING.register((server) -> SHUTTING_DOWN = true);
       ServerPlayConnectionEvents.JOIN.register(PlayerConnectionCallback::onPlayerJoin);
       ServerPlayConnectionEvents.DISCONNECT.register(PlayerConnectionCallback::onPlayerLeave);
       
@@ -267,6 +269,18 @@ public class Nations implements ModInitializer {
    
    public static boolean addTickTimerCallback(ServerWorld world, TickTimerCallback callback){
       return WORLD_TIMER_CALLBACKS.add(new Pair<>(world,callback));
+   }
+   
+   public static void addPlayerKillOnRelog(UUID playerId, UUID killerId){
+      NATIONS_DATA.get(SERVER.getOverworld()).addKillOnRelog(playerId,killerId);
+   }
+   
+   public static UUID shouldKillOnRelog(UUID playerId){
+      return NATIONS_DATA.get(SERVER.getOverworld()).shouldKillPlayerOnRelog(playerId);
+   }
+   
+   public static void removeKillOnRelog(UUID playerId){
+      NATIONS_DATA.get(SERVER.getOverworld()).removeKillOnRelog(playerId);
    }
    
    public static void devPrint(String msg){

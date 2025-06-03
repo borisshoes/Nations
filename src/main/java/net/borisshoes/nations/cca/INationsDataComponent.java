@@ -8,6 +8,7 @@ import net.minecraft.util.math.ChunkPos;
 import org.ladysnake.cca.api.v3.component.ComponentV3;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface INationsDataComponent extends ComponentV3 {
    Nation getNation(String id);
@@ -18,6 +19,7 @@ public interface INationsDataComponent extends ComponentV3 {
    CapturePoint getCapturePoint(String id);
    List<CapturePoint> getCapturePoints();
    NbtCompound getRiftData();
+   UUID shouldKillPlayerOnRelog(UUID playerId);
    boolean isWorldInitialized();
    long getNextWar();
    long getNextRift();
@@ -34,4 +36,6 @@ public interface INationsDataComponent extends ComponentV3 {
    void setLastDayTick(long time);
    void setLastTimeCheck(long time);
    void setRiftData(NbtCompound riftData);
+   void addKillOnRelog(UUID playerId, UUID killer);
+   void removeKillOnRelog(UUID playerId);
 }

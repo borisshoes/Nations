@@ -157,7 +157,7 @@ public class ConfigUtils {
       
       public abstract String getValueString();
       
-      private void setValue(T value){
+      public void setValue(T value){
          this.value = value;
       }
    }

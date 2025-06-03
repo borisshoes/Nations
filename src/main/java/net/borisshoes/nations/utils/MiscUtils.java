@@ -7,6 +7,7 @@ import net.borisshoes.nations.gameplay.ResourceType;
 import net.borisshoes.nations.items.GraphicalItem;
 import net.borisshoes.nations.items.ResourceBullionItem;
 import net.borisshoes.nations.items.ResourceCoinItem;
+import net.minecraft.component.type.ContainerComponent;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -31,6 +32,40 @@ import java.util.*;
 public class MiscUtils {
    
    private static final int CHUNK_SIZE = 16;
+   
+   public static Pair<ContainerComponent,ItemStack> tryAddStackToContainerComp(ContainerComponent container, int size, ItemStack stack){
+      List<ItemStack> beltList = new ArrayList<>(container.stream().toList());
+      
+      // Fill up existing slots first
+      for(ItemStack existingStack : beltList){
+         int curCount = stack.getCount();
+         if(stack.isEmpty()) break;
+         boolean canCombine = !existingStack.isEmpty()
+               && ItemStack.areItemsAndComponentsEqual(existingStack, stack)
+               && existingStack.isStackable()
+               && existingStack.getCount() < existingStack.getMaxCount();
+         if(!canCombine) continue;
+         int toAdd = Math.min(existingStack.getMaxCount() - existingStack.getCount(),curCount);
+         existingStack.increment(toAdd);
+         stack.setCount(curCount - toAdd);
+      }
+      
+      int nonEmpty = (int) beltList.stream().filter(s -> !s.isEmpty()).count();
+      
+      if(!stack.isEmpty() && nonEmpty < size){
+         if(nonEmpty == beltList.size()){ // No middle empty slots, append new slot to end
+            beltList.add(stack.copyAndEmpty());
+         }else{
+            for(int i = 0; i < nonEmpty; i++){ // Find middle empty slot to fill
+               if(beltList.get(i).isEmpty()){
+                  beltList.set(i, stack.copyAndEmpty());
+                  break;
+               }
+            }
+         }
+      }
+      return new Pair<>(ContainerComponent.fromStacks(beltList),stack);
+   }
    
    public static void returnItems(Inventory inv, PlayerEntity player) {
       if (inv != null) {

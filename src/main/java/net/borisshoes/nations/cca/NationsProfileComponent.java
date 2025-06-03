@@ -15,6 +15,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.GameRules;
 
 public class NationsProfileComponent implements INationsProfileComponent{
    private final PlayerEntity player;
@@ -46,6 +47,8 @@ public class NationsProfileComponent implements INationsProfileComponent{
       lastLoginBonus = nbtCompound.getLong("lastLoginBonus");
       lastTerritory = nbtCompound.getString("lastTerritory");
       titleCooldown = nbtCompound.getInt("titleCooldown");
+      combatLog = nbtCompound.getInt("combatLog");
+      combatLogPlayerId = nbtCompound.getString("combatLogPlayerId");
       
       if(nbtCompound.contains("riftReturnPos")){
          NbtCompound riftPos = nbtCompound.getCompound("riftReturnPos");
@@ -64,6 +67,8 @@ public class NationsProfileComponent implements INationsProfileComponent{
       nbtCompound.putLong("lastLoginBonus",lastLoginBonus);
       nbtCompound.putString("lastTerritory",lastTerritory);
       nbtCompound.putInt("titleCooldown",titleCooldown);
+      nbtCompound.putInt("combatLog",combatLog);
+      nbtCompound.putString("combatLogPlayerId",combatLogPlayerId);
       
       if(riftReturnPos != null){
          NbtCompound riftPos = new NbtCompound();

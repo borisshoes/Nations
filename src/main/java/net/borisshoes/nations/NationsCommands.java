@@ -11,12 +11,14 @@ import net.borisshoes.nations.gui.ChunkGui;
 import net.borisshoes.nations.integration.DynmapCalls;
 import net.borisshoes.nations.land.NationsLand;
 import net.borisshoes.nations.research.ResearchTech;
+import net.borisshoes.nations.utils.ConfigUtils;
 import net.borisshoes.nations.utils.GenericTimer;
 import net.borisshoes.nations.utils.NationsUtils;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.network.packet.c2s.common.SyncedClientOptions;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -127,7 +129,6 @@ public class NationsCommands {
                      new ImmutableTriple<>(chunkValues.getLeft(),chunkValues.getMiddle(),chunkValues.getRight()), capValues
                ));
                
-               if(finalCount % 100 == 0) System.out.println("Processed: "+ finalCount);
             }));
             count++;
          }
@@ -1284,6 +1285,111 @@ public class NationsCommands {
             src.sendMessage(Text.translatable("text.nations.added_cap_modifier",modifier,duration));
          }
          
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int defendCapturePoint(CommandContext<ServerCommandSource> ctx, ChunkSectionPos chunkPos){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         CapturePoint cap = Nations.getCapturePoint(chunkPos.toChunkPos());
+         
+         if(cap == null){
+            src.sendError(Text.translatable("text.nations.no_cap_error"));
+            return -1;
+         }
+         
+         if(!src.isExecutedByPlayer()){
+            src.sendError(Text.translatable("text.nations.not_player"));
+            return -1;
+         }
+         ServerPlayerEntity player = src.getPlayer();
+         Nation nation = Nations.getNation(player);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_player_nation_error"));
+            return -1;
+         }
+         
+         if(!nation.equals(cap.getControllingNation())){
+            src.sendError(Text.translatable("text.nations.cap_interact_wrong_nation"));
+            return -1;
+         }
+         
+         if(!WarManager.capIsContested(cap)){
+            src.sendError(Text.translatable("text.nations.war_not_contested").formatted(Formatting.RED));
+            return -1;
+         }
+         
+         int range = NationsConfig.getInt(NationsRegistry.WAR_DEFENSE_RADIUS_CFG);
+         if(range == -1){
+            src.sendError(Text.translatable("text.nations.war_no_ranged_defense").formatted(Formatting.RED));
+            return -1;
+         }
+         
+         if(!cap.getBeaconPos().isWithinDistance(player.getPos(),range)){
+            src.sendError(Text.translatable("text.nations.war_out_of_range",range).formatted(Formatting.RED));
+            return -1;
+         }
+         
+         WarManager.defendContest(cap,player);
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int editResearchTierRate(CommandContext<ServerCommandSource> ctx, int tier, int rate){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         
+         int edited = 0;
+         for(NationsConfig.ConfigSetting<?> configSetting : NationsRegistry.CONFIG_SETTINGS){
+            if(configSetting instanceof NationsConfig.ResearchConfigSetting<?> researchConfigSetting){
+               RegistryKey<ResearchTech> research = researchConfigSetting.researchKey();
+               if(NationsRegistry.RESEARCH.get(research).getRawTier() == tier || (NationsRegistry.RESEARCH.get(research).getRawTier() != -1 && tier == 0)){
+                  for(ConfigUtils.IConfigValue value : CONFIG.values){
+                     if(value instanceof ConfigUtils.IntegerConfigValue intValue && value.getName().equals(configSetting.getName()) && value.getName().startsWith("researchRate")){
+                        intValue.setValue(rate);
+                        edited++;
+                     }
+                  }
+               }
+            }
+         }
+         CONFIG.save();
+         src.sendMessage(Text.translatable("text.nations.set_research_tier_rate",edited,tier,rate));
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int editResearchTierCost(CommandContext<ServerCommandSource> ctx, int tier, int cost){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         
+         int edited = 0;
+         for(NationsConfig.ConfigSetting<?> configSetting : NationsRegistry.CONFIG_SETTINGS){
+            if(configSetting instanceof NationsConfig.ResearchConfigSetting<?> researchConfigSetting){
+               RegistryKey<ResearchTech> research = researchConfigSetting.researchKey();
+               if(NationsRegistry.RESEARCH.get(research).getRawTier() == tier || (NationsRegistry.RESEARCH.get(research).getRawTier() != -1 && tier == 0)){
+                  for(ConfigUtils.IConfigValue value : CONFIG.values){
+                     if(value instanceof ConfigUtils.IntegerConfigValue intValue && value.getName().equals(configSetting.getName()) && value.getName().startsWith("researchCost")){
+                        intValue.setValue(cost);
+                        edited++;
+                     }
+                  }
+               }
+            }
+         }
+         CONFIG.save();
+         src.sendMessage(Text.translatable("text.nations.set_research_tier_cost",edited,tier,cost));
          return 1;
       }catch(Exception e){
          log(2,e.toString());

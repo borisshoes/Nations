@@ -128,6 +128,10 @@ public class ResearchTech {
       return maxFound;
    }
    
+   public int getRawTier(){
+      return tier;
+   }
+   
    public List<ResearchTech> missingPrereqs(List<ResearchTech> researched){
       List<ResearchTech> missing = new ArrayList<>();
       for(RegistryKey<ResearchTech> prereq : prereqs){

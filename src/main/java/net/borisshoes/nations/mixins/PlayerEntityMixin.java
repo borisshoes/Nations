@@ -8,6 +8,7 @@ import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.land.NationsLand;
 import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.NationsColors;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
@@ -20,6 +21,8 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static net.borisshoes.nations.cca.PlayerComponentInitializer.PLAYER_DATA;
 
@@ -58,5 +61,15 @@ public class PlayerEntityMixin {
       PlayerEntity p = (PlayerEntity) (Object) this;
       if(!(p instanceof ServerPlayerEntity player)) return original;
       return NationsLand.shouldKeepInventory(world.getRegistryKey(),new ChunkPos(player.getBlockPos()),player);
+   }
+   
+   @Inject(method = "applyDamage", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;modifyAppliedDamage(Lnet/minecraft/entity/damage/DamageSource;F)F", shift = At.Shift.AFTER))
+   private void nations_applyCombatLog(ServerWorld world, DamageSource source, float amount, CallbackInfo ci){
+      PlayerEntity p = (PlayerEntity) (Object) this;
+      if(!(p instanceof ServerPlayerEntity player)) return;
+      if(source.getAttacker() instanceof ServerPlayerEntity attacker){
+         Nations.getPlayer(player).resetCombatLog(attacker);
+         Nations.getPlayer(attacker).resetCombatLog(player);
+      }
    }
 }

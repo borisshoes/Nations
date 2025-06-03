@@ -170,6 +170,10 @@ public class TickCallback {
          
          TimedEvents.tickTimedEvents(server);
          WarManager.tickWar(server);
+         
+         if(server.getTicks() % 20 == 0){
+            PlayerConnectionCallback.tickLogoutTracker(server);
+         }
       }catch(Exception e){
          e.printStackTrace();
       }

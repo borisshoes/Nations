@@ -192,10 +192,6 @@ public class InteractionEvents {
          } else if (res.getType() == HitResult.Type.ENTITY) {
             Entity hit = ((EntityHitResult) res).getEntity();
             boolean fail = attackSimple(player, hit) != ActionResult.PASS;
-            if(!fail && hit instanceof ServerPlayerEntity target){
-               Nations.getPlayer(target).resetCombatLog(player);
-               Nations.getPlayer(player).resetCombatLog(target);
-            }
             if (fail && proj instanceof PersistentProjectileEntity pers && pers.getPierceLevel() > 0) {
                IntOpenHashSet pierced = ((PersistentProjectileEntityAccessor) pers).getPiercedEntities();
                if (pierced == null)
@@ -213,10 +209,6 @@ public class InteractionEvents {
    public static boolean preventDamage(Entity entity, DamageSource source) {
       if (source.getAttacker() instanceof ServerPlayerEntity player){
          boolean cantAttack = attackSimple((ServerPlayerEntity) source.getAttacker(), entity) != ActionResult.PASS;
-         if(!cantAttack && entity instanceof ServerPlayerEntity target){
-            Nations.getPlayer(target).resetCombatLog(player);
-            Nations.getPlayer(player).resetCombatLog(target);
-         }
          return cantAttack;
       } else if (source.isIn(DamageTypeTags.IS_EXPLOSION) && !entity.getWorld().isClient && !(entity instanceof ServerPlayerEntity || entity instanceof Monster)) {
          return !NationsLand.canExplosionDamage(entity);
@@ -247,12 +239,6 @@ public class InteractionEvents {
    
    public static ActionResult attackEntity(PlayerEntity player, World world, Hand hand, Entity entity, EntityHitResult entityHitResult){
       ActionResult canAttack = attackSimple(player, entity);
-      if(entity instanceof ServerPlayerEntity target && player instanceof ServerPlayerEntity serverPlayer){
-         if(canAttack != ActionResult.FAIL){
-            Nations.getPlayer(target).resetCombatLog(serverPlayer);
-            Nations.getPlayer(serverPlayer).resetCombatLog(target);
-         }
-      }
       return canAttack;
    }
    

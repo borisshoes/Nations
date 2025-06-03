@@ -1,5 +1,7 @@
 package net.borisshoes.nations.callbacks;
 
+import com.mojang.authlib.GameProfile;
+import com.mojang.serialization.Dynamic;
 import net.borisshoes.arcananovum.ArcanaNovum;
 import net.borisshoes.arcananovum.ArcanaRegistry;
 import net.borisshoes.arcananovum.cardinalcomponents.IArcanaProfileComponent;
@@ -12,19 +14,44 @@ import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.cca.INationsProfileComponent;
 import net.borisshoes.nations.gameplay.Nation;
 import net.borisshoes.nations.gameplay.WarManager;
+import net.borisshoes.nations.land.NationsLand;
+import net.borisshoes.nations.mixins.LivingEntityAccessor;
+import net.borisshoes.nations.mixins.PlayerEntityAccessor;
+import net.borisshoes.nations.mixins.PlayerManagerAccessor;
 import net.borisshoes.nations.utils.GenericTimer;
+import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.ParticleEffectUtils;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.packet.c2s.common.SyncedClientOptions;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldProperties;
+import net.minecraft.world.dimension.DimensionType;
+
+import java.util.*;
+
+import static net.borisshoes.nations.Nations.BLANK_UUID;
+import static net.borisshoes.nations.Nations.LOGOUT_TRACKER;
 
 public class PlayerConnectionCallback {
    
@@ -68,6 +95,21 @@ public class PlayerConnectionCallback {
             ParticleEffectUtils.netherRiftTeleport(server.getOverworld(),player.getPos(),0);
          }));
       }
+      
+      UUID killerId = Nations.shouldKillOnRelog(player.getUuid());
+      if(killerId != null){
+         ServerPlayerEntity killer = server.getPlayerManager().getPlayer(killerId);
+         Nations.addTickTimerCallback( new GenericTimer(20, () -> {
+            if(killer != null){
+               player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE,killer),player.getHealth()*100);
+            }else{
+               player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE),player.getHealth()*100);
+            }
+            Nations.removeKillOnRelog(player.getUuid());
+         }));
+      }
+      
+      LOGOUT_TRACKER.remove(player.getUuid());
    }
    
    public static void onPlayerLeave(ServerPlayNetworkHandler handler, MinecraftServer server) {
@@ -76,19 +118,88 @@ public class PlayerConnectionCallback {
       profile.removePlayerTeam(server);
       profile.setLastOnline(System.currentTimeMillis());
       boolean inCombat = profile.getCombatLog() > 0;
-      
-      for(WarManager.Contest contest : WarManager.getActiveContests()){
-         if(contest.attacker().equals(player)){
-            player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE, contest.defender(), contest.defender()),player.getHealth()*100);
-         }else if(contest.defender().equals(player)){
-            player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE, contest.attacker(), contest.attacker()),player.getHealth()*100);
-         }
-      }
+      boolean inContest = WarManager.getActiveContests().stream().anyMatch(contest -> contest.attacker().equals(player) || contest.defender().equals(player));
       
       WarManager.cancelPendingContestsFromPlayer(player);
       
-      if(player.isAlive() && inCombat){
-         player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE),player.getHealth()*100);
+      if(inCombat || inContest){
+         int gracePeriod = NationsConfig.getInt(NationsRegistry.COMBAT_LOG_GRACE_PERIOD_CFG);
+         if(gracePeriod == 0){
+            onCombatLog(player.getUuid(),server);
+         }else{
+            LOGOUT_TRACKER.put(player.getUuid(),0);
+         }
+      }
+   }
+   
+   public static void onCombatLog(UUID playerId, MinecraftServer server){
+      ServerPlayerEntity player = server.getPlayerManager().getPlayer(playerId);
+      if(player == null){ // Offline
+         PlayerManager manager = server.getPlayerManager();
+         GameProfile profile = server.getUserCache().getByUuid(playerId).orElse(null);
+         if(profile == null) return;
+         player = server.getPlayerManager().createPlayer(profile, SyncedClientOptions.createDefault());
+         Optional<NbtCompound> optional = manager.loadPlayerData(player);
+         player.getInventory().readNbt(optional.get().getList("Inventory", NbtElement.COMPOUND_TYPE));;
+         RegistryKey<World> registryKey = optional.flatMap(nbt -> DimensionType.worldFromDimensionNbt(new Dynamic<>(NbtOps.INSTANCE, nbt.get("Dimension"))).resultOrPartial()).orElse(World.OVERWORLD);
+         ServerWorld serverWorld = manager.getServer().getWorld(registryKey);
+         player.setServerWorld(serverWorld);
+         
+         String combatLogId = Nations.getPlayer(player).getCombatLogPlayerId();
+         ServerPlayerEntity killer = server.getPlayerManager().getPlayer(MiscUtils.getUUID(combatLogId));
+         
+         ((LivingEntityAccessor)player).dropEntityExperience(serverWorld,killer);
+         
+         boolean keepInventory = NationsLand.shouldKeepInventory(registryKey,player.getChunkPos(),player);
+         if(!keepInventory){
+            ((PlayerEntityAccessor)player).vanishingCurse();
+            
+            for(int ind = 0; ind < player.getInventory().size(); ind++){
+               ItemStack stack = player.getInventory().getStack(ind);
+               if(!stack.isEmpty() && EnchantmentHelper.getLevel(MiscUtils.getEnchantment(ArcanaRegistry.FATE_ANCHOR), stack) <= 0){
+                  double d = player.getEyeY() - 0.3F;
+                  ItemEntity itemEntity = new ItemEntity(player.getWorld(), player.getX(), d, player.getZ(), stack);
+                  itemEntity.setPickupDelay(40);
+                  float f = player.getRandom().nextFloat() * 0.1F;
+                  float g = player.getRandom().nextFloat() * (float) (Math.PI * 2);
+                  itemEntity.setVelocity(-MathHelper.sin(g) * f, 0.2F, MathHelper.cos(g) * f);
+                  serverWorld.spawnEntity(itemEntity);
+                  player.getInventory().setStack(ind,ItemStack.EMPTY);
+               }
+            }
+            player.setExperienceLevel(0);
+            player.setExperiencePoints(0);
+         }
+         ((PlayerManagerAccessor)manager).savePlayerNbtData(player);
+         
+         if(killer != null){
+            server.getPlayerManager().broadcast(Text.translatable("text.nations.combat_log_expire_player",player.getStyledDisplayName(),killer.getStyledDisplayName()),false);
+         }else{
+            server.getPlayerManager().broadcast(Text.translatable("text.nations.combat_log_expire",player.getStyledDisplayName()),false);
+         }
+         Nations.addPlayerKillOnRelog(playerId,MiscUtils.getUUID(combatLogId));
+      }else if(player.isAlive()){
+         String combatLogId = Nations.getPlayer(player).getCombatLogPlayerId();
+         ServerPlayerEntity killer = server.getPlayerManager().getPlayer(MiscUtils.getUUID(combatLogId));
+         if(killer != null){
+            player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE,killer),player.getHealth()*100);
+         }else{
+            player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE),player.getHealth()*100);
+         }
+      }
+   }
+   
+   public static void tickLogoutTracker(MinecraftServer server){
+      int gracePeriod = NationsConfig.getInt(NationsRegistry.COMBAT_LOG_GRACE_PERIOD_CFG);
+      for(UUID player : new HashSet<>(LOGOUT_TRACKER.keySet())){
+         int timer = LOGOUT_TRACKER.get(player) + 1;
+         if(timer >= gracePeriod){
+            LOGOUT_TRACKER.remove(player);
+            onCombatLog(player,server);
+         }else{
+            System.out.println("Increasing combat log to "+timer+" for "+player);
+            LOGOUT_TRACKER.put(player,timer);
+         }
       }
    }
 }
