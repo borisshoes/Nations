@@ -27,6 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @Mixin(ServerPlayerEntity.class)
 public class ServerPlayerEntityMixin {
@@ -75,7 +76,7 @@ public class ServerPlayerEntityMixin {
    
    
    @Inject(method = "onDeath", at = @At(value = "HEAD"))
-   private void nations_contestDeath(DamageSource damageSource, CallbackInfo ci){
+   private void nations_onDeath(DamageSource damageSource, CallbackInfo ci){
       ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
       INationsProfileComponent profile = Nations.getPlayer(player);
       profile.removeCombatLog();
@@ -100,18 +101,17 @@ public class ServerPlayerEntityMixin {
       
       
       WarManager.Contest completedContest = null;
-      ServerPlayerEntity winner = null;
+      UUID winner = null;
       for(WarManager.Contest contest : WarManager.getActiveContests()){
          if(contest.isProxy()) continue;
-         ServerPlayerEntity attacker = contest.attacker();
-         ServerPlayerEntity defender = contest.defender();
-         if(!player.equals(attacker) && !player.equals(defender)) continue;
+         UUID attacker = contest.attacker();
+         UUID defender = contest.defender();
+         if(!player.getUuid().equals(attacker) && !player.getUuid().equals(defender)) continue;
          Vec3d tpPos = contest.capturePoint().getBeaconPos().toCenterPos().add(0,2,0);
          player.teleportTo(new TeleportTarget(player.getServer().getOverworld(),tpPos,Vec3d.ZERO,player.getYaw(),player.getPitch(),TeleportTarget.NO_OP));
          completedContest = contest;
-         winner = player.equals(attacker) ? contest.defender() : contest.attacker();
+         winner = player.getUuid().equals(attacker) ? contest.defender() : contest.attacker();
       }
-      
       if(completedContest != null){
          WarManager.concludeContest(player.getServer(),completedContest,winner);
       }

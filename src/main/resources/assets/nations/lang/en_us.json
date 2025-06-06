@@ -731,5 +731,19 @@
   "text.nations.combat_log_expire_player": "%s combat logged against %s",
   "text.nations.combat_log_expire": "%s combat logged",
   "text.nations.set_research_tier_rate": "Set research rate for %s techs of tier %s (0 is all main techs) to %s coins per day.",
-  "text.nations.set_research_tier_cost": "Set research cost for %s techs of tier %s (0 is all main techs) to %s coins."
+  "text.nations.set_research_tier_cost": "Set research cost for %s techs of tier %s (0 is all main techs) to %s coins.",
+  "text.nations.no_war_active": "There is no War...",
+  "text.nations.war_readout_header": "War Active! Ends in %s",
+  "text.nations.war_readout_cycle": "Cycle %s/%s | Phase: %s",
+  "text.nations.attack": "Attack",
+  "text.nations.defend": "Defend",
+  "text.nations.war_readout_next_phase": "Next Phase in %s",
+  "text.nations.war_readout_attack_count": "You can issue %s more Attacks this war.",
+  "text.nations.war_readout_attacks_header": "Active Attacks:",
+  "text.nations.war_readout_locked_header": "Locked Capture Points:",
+  "text.nations.war_readout_duels_header": "Active Duels:",
+  "text.nations.cap_locked": "The %s %s %s at %s",
+  "text.nations.cap_duel_active": "The %s %s %s at %s (%s vs %s)",
+  "text.nations.defend_info": "To Defend your Capture Point, get within %s blocks and type %s",
+  "text.nations.click_to_defend": "Click here to run the command"
 }

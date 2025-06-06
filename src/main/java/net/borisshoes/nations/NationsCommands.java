@@ -1396,4 +1396,15 @@ public class NationsCommands {
          return -1;
       }
    }
+   
+   public static int warStatus(CommandContext<ServerCommandSource> ctx){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         src.sendMessage(WarManager.getWarStatus(src.getPlayer()));
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
 }

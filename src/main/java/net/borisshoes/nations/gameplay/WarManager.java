@@ -6,12 +6,15 @@ import net.borisshoes.arcananovum.utils.SpawnPile;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
+import net.borisshoes.nations.callbacks.PlayerConnectionCallback;
+import net.borisshoes.nations.cca.INationsProfileComponent;
 import net.borisshoes.nations.utils.GenericTimer;
 import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.ParticleEffectUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.CommandBossBar;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -22,6 +25,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -32,10 +37,11 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.TeleportTarget;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-import static net.borisshoes.nations.Nations.MOD_ID;
+import static net.borisshoes.nations.Nations.*;
 
 public class WarManager {
    
@@ -49,6 +55,86 @@ public class WarManager {
    private static boolean warActive = false;
    private static boolean attackPhase = false;
    private static int attackCycle = 0;
+   
+   public static MutableText getWarStatus(@Nullable ServerPlayerEntity player){
+      if(!warActive) return Text.translatable("text.nations.no_war_active").formatted(Formatting.GREEN);
+      Nation nation;
+      if(player != null) nation = getNation(player);
+      else{
+         nation = null;
+      }
+      long now = System.currentTimeMillis();
+      long warDuration = NationsConfig.getInt(NationsRegistry.WAR_DURATION_CFG) * 60000L; // millis
+      int numCycles = NationsConfig.getInt(NationsRegistry.WAR_CYCLES_CFG);
+      int numAttacks = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_LIMIT_CFG);
+      float cycleDuration = (float) warDuration / numCycles; // millis
+      long warEnd = warStart + warDuration; // millis
+      long elapsed = now - warStart;
+      float phaseDuration = cycleDuration / 2;
+      float phaseElapsed = elapsed % phaseDuration;
+      
+      MutableText text = Text.empty();
+      text.append(Text.translatable("text.nations.war_readout_header",
+            MiscUtils.getTimeDiff(warEnd-now)).formatted(Formatting.YELLOW)
+      ).formatted(Formatting.RED).append(Text.literal("\n"));
+      text.append(Text.translatable("text.nations.war_readout_cycle",
+            Text.literal(""+attackCycle).formatted(Formatting.AQUA,Formatting.BOLD),
+            Text.literal(""+numCycles).formatted(Formatting.AQUA,Formatting.BOLD),
+            Text.translatable(attackPhase ? "text.nations.attack" : "text.nations.defend").formatted(Formatting.LIGHT_PURPLE,Formatting.BOLD)
+      ).formatted(Formatting.DARK_AQUA)).append(Text.literal("\n"));
+      text.append(Text.translatable("text.nations.war_readout_next_phase",
+            MiscUtils.getTimeDiff((long)(phaseDuration-phaseElapsed)).formatted(Formatting.GREEN)
+      ).formatted(Formatting.DARK_GREEN)).append(Text.literal("\n\n"));
+      if(nation != null){
+         int atkCount = numAttacks-ATTACKS_ISSUED.getOrDefault(nation,0);
+         text.append(Text.translatable("text.nations.war_readout_attack_count",Text.literal(""+atkCount).formatted(Formatting.BOLD,Formatting.GOLD))).formatted(Formatting.RED).append(Text.literal("\n"));
+      }
+      text.append(Text.translatable("text.nations.war_readout_attacks_header").formatted(Formatting.YELLOW,Formatting.BOLD)).append(Text.literal("\n"));
+      PENDING_CONTESTS.forEach((cap, attacker) ->{
+         Text controllingNationText = cap.getControllingNation() == null ? Text.translatable("text.nations.unclaimed_tag") : cap.getControllingNation().getFormattedNameTag(false);
+         MutableText msg = Text.translatable("text.nations.cap_duel_contested",
+               controllingNationText,
+               cap.getType().getText(),
+               Text.translatable("text.nations.capture_point").formatted(cap.getType().getTextColor()),
+               Text.literal(cap.getChunkPos().toString()).formatted(Formatting.DARK_AQUA),
+               attacker.getDisplayName()
+         ).formatted(Formatting.YELLOW);
+         text.append(Text.literal(" - ").formatted(Formatting.BOLD,Formatting.GOLD)).append(msg).append(Text.literal("\n"));
+      });
+      if(nation != null){
+         text.append(Text.translatable("text.nations.war_readout_locked_header").formatted(Formatting.RED,Formatting.BOLD)).append(Text.literal("\n"));
+         LOCKED_CAPS.forEach((cap, list) -> {
+            if(!list.contains(nation)) return;
+            Text controllingNationText = cap.getControllingNation() == null ? Text.translatable("text.nations.unclaimed_tag") : cap.getControllingNation().getFormattedNameTag(false);
+            MutableText msg = Text.translatable("text.nations.cap_locked",
+                  controllingNationText,
+                  cap.getType().getText(),
+                  Text.translatable("text.nations.capture_point").formatted(cap.getType().getTextColor()),
+                  Text.literal(cap.getChunkPos().toString()).formatted(Formatting.DARK_AQUA)
+            ).formatted(Formatting.RED);
+            text.append(Text.literal(" - ").formatted(Formatting.BOLD,Formatting.DARK_RED)).append(msg).append(Text.literal("\n"));
+         });
+      }
+      text.append(Text.translatable("text.nations.war_readout_duels_header").formatted(Formatting.GREEN,Formatting.BOLD)).append(Text.literal("\n"));
+      ACTIVE_CONTESTS.forEach(contest -> {
+         CapturePoint cap = contest.capturePoint();
+         UUID attackerId = contest.attacker();
+         UUID defenderId = contest.defender();
+         ServerPlayerEntity attacker = SERVER.getPlayerManager().getPlayer(attackerId);
+         ServerPlayerEntity defender = SERVER.getPlayerManager().getPlayer(defenderId);
+         Text controllingNationText = cap.getControllingNation() == null ? Text.translatable("text.nations.unclaimed_tag") : cap.getControllingNation().getFormattedNameTag(false);
+         MutableText msg = Text.translatable("text.nations.cap_duel_active",
+               controllingNationText,
+               cap.getType().getText(),
+               Text.translatable("text.nations.capture_point").formatted(cap.getType().getTextColor()),
+               Text.literal(cap.getChunkPos().toString()).formatted(Formatting.DARK_AQUA),
+               attacker == null ? Text.literal(attackerId.toString()) : attacker.getStyledDisplayName(),
+               defender == null ? Text.literal(defenderId.toString()) : defender.getStyledDisplayName()
+         ).formatted(Formatting.GREEN);
+         text.append(Text.literal(" - ").formatted(Formatting.BOLD,Formatting.DARK_GREEN)).append(msg).append(Text.literal("\n"));
+      });
+      return text;
+   }
    
    private static void lockCapturePoint(CapturePoint capturePoint){
       LOCKED_CAPS.put(capturePoint,new ArrayList<>(Nations.getNations()));
@@ -140,6 +226,22 @@ public class WarManager {
             player.getDisplayName()
       ).formatted(Formatting.YELLOW);
       Nations.announce(announcement);
+      
+      int defendRadius = NationsConfig.getInt(NationsRegistry.WAR_DEFENSE_RADIUS_CFG);
+      if(capturePoint.getControllingNation() != null && defendRadius > 8){
+         Nation defNation = capturePoint.getControllingNation();
+         ChunkPos pos = capturePoint.getChunkPos();
+         Text defMsg = Text.translatable("text.nations.defend_info",
+               Text.literal(String.format("%,d",defendRadius)).formatted(Formatting.BOLD,Formatting.GOLD),
+               Text.literal("/nation defend "+pos.x+" "+pos.z).formatted(Formatting.ITALIC,Formatting.GOLD)
+         ).formatted(Formatting.RED).styled(style ->
+               style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/nation defend "+pos.x+" "+pos.z))
+                  .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("text.nations.click_to_defend"))));
+         
+         for(ServerPlayerEntity onlinePlayer : defNation.getOnlinePlayers()){
+            onlinePlayer.sendMessage(defMsg,false);
+         }
+      }
    }
    
    public static void defendContest(CapturePoint capturePoint, ServerPlayerEntity defender){
@@ -150,7 +252,7 @@ public class WarManager {
       Contest main = startContest(defender.getServer(),capturePoint,attacker,defender);
       for(CapturePoint defendPoint : defendPoints){
          if(defendPoint.equals(capturePoint)) continue;
-         Contest record = new Contest(defendPoint, attacker, defender);
+         Contest record = new Contest(defendPoint, attacker.getUuid(), defender.getUuid());
          record.setProxy(main);
          PENDING_CONTESTS.remove(defendPoint);
          ACTIVE_CONTESTS.add(record);
@@ -229,8 +331,8 @@ public class WarManager {
          boolean newAtk = attackPhase;
          int newCycle = attackCycle;
          if(atk && !newAtk){ // Attack End
-            float cycleDuration = (float) warDuration / NationsConfig.getInt(NationsRegistry.WAR_CYCLES_CFG);
-            Nations.announce(Text.translatable("text.nations.war_attack_end", String.format("%03.2f",cycleDuration/2.0)).formatted(Formatting.RED));
+            long cycleDuration = 60000L * warDuration / (NationsConfig.getInt(NationsRegistry.WAR_CYCLES_CFG) * 2L);
+            Nations.announce(Text.translatable("text.nations.war_attack_end", MiscUtils.getTimeDiff(cycleDuration).formatted(Formatting.GOLD)).formatted(Formatting.RED));
          }else if(!atk && newAtk){ // Attack Start
             Nations.announce(Text.translatable("text.nations.war_attack_start").formatted(Formatting.RED));
          }
@@ -279,15 +381,16 @@ public class WarManager {
       }
    }
    
-   public static void concludeContest(MinecraftServer server, Contest record, ServerPlayerEntity winner){
+   public static void concludeContest(MinecraftServer server, Contest record, UUID winnerId){
       ServerWorld contestWorld = server.getWorld(NationsRegistry.CONTEST_DIM);
       ServerWorld overworld = server.getOverworld();
       CapturePoint cap = record.capturePoint();
       ChunkPos capPos = cap.getChunkPos();
+      ServerPlayerEntity winner = server.getPlayerManager().getPlayer(winnerId);
       if(record.isProxy()) return;
       
       Vec3d tpPos = cap.getBeaconPos().toCenterPos().add(0,2,0);
-      winner.addStatusEffect(new StatusEffectInstance(ArcanaRegistry.DEATH_WARD_EFFECT,110,0,false,false,false));
+      if(winner != null) winner.addStatusEffect(new StatusEffectInstance(ArcanaRegistry.DEATH_WARD_EFFECT,110,0,false,false,false));
       
       List<Contest> proxies = new ArrayList<>();
       proxies.add(record);
@@ -302,15 +405,16 @@ public class WarManager {
          ACTIVE_CONTESTS.remove(proxy);
          
          Text controllingNationText = proxyCap.getControllingNation() == null ? Text.translatable("text.nations.unclaimed_tag") : proxyCap.getControllingNation().getFormattedNameTag(false);
-         if(winner.equals(record.attacker)){ // Attacker win, change cap ownership
-            Nation nation = Nations.getNation(winner);
-            if(nation != null){
+         if(winnerId.equals(record.attacker)){ // Attacker win, change cap ownership
+            INationsProfileComponent profile = Nations.getPlayerOrOffline(winnerId);
+            if(profile != null && profile.getNation() != null){
+               Nation nation = profile.getNation();
                MutableText announcement = Text.translatable("text.nations.cap_duel_attacker_victory",
                      controllingNationText,
                      proxyCap.getType().getText().formatted(Formatting.BOLD),
                      Text.translatable("text.nations.capture_point").formatted(Formatting.BOLD,proxyCap.getType().getTextColor()),
                      Text.literal(proxyCap.getChunkPos().toString()).formatted(Formatting.YELLOW,Formatting.BOLD),
-                     winner.getDisplayName()
+                     winner != null ? winner.getDisplayName() : winnerId
                ).formatted(Formatting.RED);
                Nations.announce(announcement);
                if(Nations.getChunk(proxyCap.getChunkPos()).getControllingNation() != null){
@@ -325,24 +429,26 @@ public class WarManager {
                   proxyCap.getType().getText().formatted(Formatting.BOLD),
                   Text.translatable("text.nations.capture_point").formatted(Formatting.BOLD,proxyCap.getType().getTextColor()),
                   Text.literal(proxyCap.getChunkPos().toString()).formatted(Formatting.YELLOW,Formatting.BOLD),
-                  winner.getDisplayName()
+                  winner != null ? winner.getDisplayName() : winnerId
             ).formatted(Formatting.RED);
             Nations.announce(announcement);
             proxyCap.buffOutput();
          }
       }
       
-      winner.heal(winner.getMaxHealth());
-      winner.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE,1200,4));
-      
-      winner.networkHandler.sendPacket(new TitleFadeS2CPacket(20, 40, 20));
-      winner.networkHandler.sendPacket(new TitleS2CPacket(Text.translatable("text.nations.duel_winner").formatted(Formatting.LIGHT_PURPLE)));
-      
-      Nations.addTickTimerCallback(new GenericTimer(20*5, () -> {
-         winner.teleportTo(new TeleportTarget(overworld,tpPos, Vec3d.ZERO,winner.getYaw(),winner.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
-         winner.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
-         ParticleEffectUtils.netherRiftTeleport(overworld,winner.getPos(),0);
-      }));
+      if(winner != null){
+         winner.heal(winner.getMaxHealth());
+         winner.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE,1200,4));
+         
+         winner.networkHandler.sendPacket(new TitleFadeS2CPacket(20, 40, 20));
+         winner.networkHandler.sendPacket(new TitleS2CPacket(Text.translatable("text.nations.duel_winner").formatted(Formatting.LIGHT_PURPLE)));
+         
+         Nations.addTickTimerCallback(new GenericTimer(20*5, () -> {
+            winner.teleportTo(new TeleportTarget(overworld,tpPos, Vec3d.ZERO,winner.getYaw(),winner.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
+            winner.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
+            ParticleEffectUtils.netherRiftTeleport(overworld,winner.getPos(),0);
+         }));
+      }
       Nations.addTickTimerCallback(new GenericTimer(20*5, () -> {
          teardownDuel(capPos,contestWorld);
       }));
@@ -355,7 +461,7 @@ public class WarManager {
    public static Contest startContest(MinecraftServer server, CapturePoint cap, ServerPlayerEntity attacker, ServerPlayerEntity defender){
       ServerWorld contestWorld = server.getWorld(NationsRegistry.CONTEST_DIM);
       ServerWorld overworld = server.getOverworld();
-      Contest record = new Contest(cap, attacker, defender);
+      Contest record = new Contest(cap, attacker.getUuid(), defender.getUuid());
       ChunkPos capPos = cap.getChunkPos();
       PENDING_CONTESTS.remove(cap);
       ACTIVE_CONTESTS.add(record);
@@ -506,15 +612,15 @@ public class WarManager {
    
    public static class Contest{
       private final CapturePoint capturePoint;
-      private final ServerPlayerEntity attacker;
-      private final ServerPlayerEntity defender;
+      private final UUID attacker;
+      private final UUID defender;
       private int age;
       private boolean begun;
       private Contest proxy;
       private int attackOnCapTicks;
       private CommandBossBar bossBar;
       
-      public Contest(CapturePoint capturePoint, ServerPlayerEntity attacker, ServerPlayerEntity defender){
+      public Contest(CapturePoint capturePoint, UUID attacker, UUID defender){
          this.capturePoint = capturePoint;
          this.attacker = attacker;
          this.defender = defender;
@@ -534,27 +640,32 @@ public class WarManager {
          Box bounds = new Box(corner1.toCenterPos(),corner2.toCenterPos());
          
          if(begun){
-            List<ServerPlayerEntity> players = contestWorld.getPlayers(p -> !p.isSpectator() && !p.isCreative() && p.getBoundingBox().intersects(bounds));
+            ServerPlayerEntity attackerPlayer = server.getPlayerManager().getPlayer(attacker);
+            ServerPlayerEntity defenderPlayer = server.getPlayerManager().getPlayer(defender);
+            
+            List<UUID> players = new ArrayList<>(contestWorld.getPlayers(p -> !p.isSpectator() && !p.isCreative() && p.getBoundingBox().intersects(bounds)).stream().map(Entity::getUuid).toList());
             if(players.contains(attacker)){
                players.remove(attacker);
-            }else{ // Defender victory
-               attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defender),attacker.getHealth()*100);
+            }else if(attackerPlayer != null){ // Defender victory
+               attackerPlayer.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defenderPlayer),attackerPlayer.getHealth()*100);
             }
             
             if(players.contains(defender)){
                players.remove(defender);
-            }else{ // Attacker victory
-               defender.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attacker),defender.getHealth()*100);
+            }else if(defenderPlayer != null){ // Attacker victory
+               defenderPlayer.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attackerPlayer),defenderPlayer.getHealth()*100);
             }
             
-            for(ServerPlayerEntity player : players){ // Interlopers
-               player.teleportTo(new TeleportTarget(contestWorld,player.getPos(), Vec3d.ZERO,player.getYaw(),player.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
+            for(UUID playerId : players){ // Interlopers
+               ServerPlayerEntity player = server.getPlayerManager().getPlayer(playerId);
+               if(player == null) continue;
+               player.teleportTo(new TeleportTarget(overworld,player.getPos(), Vec3d.ZERO,player.getYaw(),player.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
                player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
-               ParticleEffectUtils.netherRiftTeleport(contestWorld,player.getPos(),0);
+               ParticleEffectUtils.netherRiftTeleport(overworld,player.getPos(),0);
             }
             
-            if(attacker.squaredDistanceTo(capturePoint.getBeaconPos().toCenterPos().add(0,3,0)) <= 25){
-               if(!(defender.squaredDistanceTo(capturePoint.getBeaconPos().toCenterPos().add(0,3,0)) <= 25))
+            if(attackerPlayer != null && attackerPlayer.squaredDistanceTo(capturePoint.getBeaconPos().toCenterPos().add(0,3,0)) <= 25){
+               if(defenderPlayer == null || !(defenderPlayer.squaredDistanceTo(capturePoint.getBeaconPos().toCenterPos().add(0,3,0)) <= 25))
                   attackOnCapTicks++;
             }else if(attackOnCapTicks > 0){
                attackOnCapTicks -= Math.min(attackOnCapTicks,5);
@@ -563,10 +674,20 @@ public class WarManager {
             int capDuration = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_CAPTURE_DURATION_CFG); // seconds
             int contestDuration = NationsConfig.getInt(NationsRegistry.WAR_CONTEST_DURATION_CFG); // minutes
             if(age > (contestDuration * 1200)){ // Timeout - Defender Victory
-               attacker.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defender),attacker.getHealth()*100);
+               if(attackerPlayer != null){
+                  attackerPlayer.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attackerPlayer),attackerPlayer.getHealth()*100);
+               }else{
+                  LOGOUT_TRACKER.remove(attacker);
+                  PlayerConnectionCallback.onCombatLog(attacker,server);
+               }
             }
             if(attackOnCapTicks > (capDuration * 20)){ // Capture - Attacker Victory
-               defender.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attacker),defender.getHealth()*100);
+               if(defenderPlayer != null){
+                  defenderPlayer.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defenderPlayer),defenderPlayer.getHealth()*100);
+               }else{
+                  LOGOUT_TRACKER.remove(defender);
+                  PlayerConnectionCallback.onCombatLog(defender,server);
+               }
             }
             
             if(attackOnCapTicks > 0){
@@ -580,8 +701,12 @@ public class WarManager {
                   }
                }
                Text captureText = Text.translatable("text.nations.capture_progress",Text.literal(message.toString()).formatted(Formatting.GOLD)).formatted(Formatting.BOLD,Formatting.RED);
-               attacker.sendMessage(captureText,true);
-               defender.sendMessage(captureText,true);
+               if(attackerPlayer != null){
+                  attackerPlayer.sendMessage(captureText,true);
+               }
+               if(defenderPlayer != null){
+                  defenderPlayer.sendMessage(captureText,true);
+               }
             }
             
             bossBar.setName(getBossbarText());
@@ -599,12 +724,14 @@ public class WarManager {
       public void setBegun(boolean begun){
          this.begun = begun;
          if(!isProxy()){
-            this.bossBar = Nations.SERVER.getBossBarManager().add(Identifier.of(MOD_ID,"contest."+capturePoint.getId().toString()), getBossbarText());
+            this.bossBar = SERVER.getBossBarManager().add(Identifier.of(MOD_ID,"contest."+capturePoint.getId().toString()), getBossbarText());
             bossBar.setColor(BossBar.Color.RED);
             bossBar.setStyle(BossBar.Style.PROGRESS);
             bossBar.setPercent(100);
-            bossBar.addPlayer(attacker);
-            bossBar.addPlayer(defender);
+            ServerPlayerEntity attackerPlayer = SERVER.getPlayerManager().getPlayer(attacker);
+            ServerPlayerEntity defenderPlayer = SERVER.getPlayerManager().getPlayer(defender);
+            bossBar.addPlayer(attackerPlayer);
+            bossBar.addPlayer(defenderPlayer);
          }
       }
       
@@ -620,11 +747,11 @@ public class WarManager {
          return capturePoint;
       }
       
-      public ServerPlayerEntity attacker(){
+      public UUID attacker(){
          return attacker;
       }
       
-      public ServerPlayerEntity defender(){
+      public UUID defender(){
          return defender;
       }
       

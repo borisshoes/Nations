@@ -81,25 +81,31 @@ public class PlayerConnectionCallback {
          }
       }
       
+      boolean teleported = false;
       if(profile.getRiftReturnPos() != null && player.getWorld().getRegistryKey().equals(World.NETHER) && (Nations.LAST_RIFT == null || !Nations.LAST_RIFT.isActive())){
          Nations.addTickTimerCallback( new GenericTimer(10, () -> {
             player.teleportTo(new TeleportTarget(server.getOverworld(), SpawnPile.makeSpawnLocations(1,10,server.getOverworld(),profile.getRiftReturnPos()).getFirst().toCenterPos(), Vec3d.ZERO,player.getYaw(),player.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
             player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
             ParticleEffectUtils.netherRiftTeleport(server.getOverworld(),player.getPos(),0);
          }));
+         teleported = true;
       }else if(player.getWorld().getRegistryKey().equals(NationsRegistry.CONTEST_DIM)){
-         Vec3d playerPos = player.getPos().add(0,1,0);
-         Nations.addTickTimerCallback( new GenericTimer(10, () -> {
-            player.teleportTo(new TeleportTarget(server.getOverworld(), playerPos, Vec3d.ZERO,player.getYaw(),player.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
-            player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
-            ParticleEffectUtils.netherRiftTeleport(server.getOverworld(),player.getPos(),0);
-         }));
+         boolean inContest = WarManager.getActiveContests().stream().anyMatch(contest -> contest.hasBegun() && (contest.defender().equals(player.getUuid()) || contest.attacker().equals(player.getUuid())));
+         if(!inContest){
+            Vec3d playerPos = player.getPos().add(0,1,0);
+            Nations.addTickTimerCallback( new GenericTimer(10, () -> {
+               player.teleportTo(new TeleportTarget(server.getOverworld(), playerPos, Vec3d.ZERO,player.getYaw(),player.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
+               player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
+               ParticleEffectUtils.netherRiftTeleport(server.getOverworld(),player.getPos(),0);
+            }));
+            teleported = true;
+         }
       }
       
       UUID killerId = Nations.shouldKillOnRelog(player.getUuid());
       if(killerId != null){
          ServerPlayerEntity killer = server.getPlayerManager().getPlayer(killerId);
-         Nations.addTickTimerCallback( new GenericTimer(20, () -> {
+         Nations.addTickTimerCallback(new GenericTimer(teleported ? 45 : 20, () -> {
             if(killer != null){
                player.damage(player.getServerWorld(), ArcanaDamageTypes.of(player.getServerWorld(),NationsRegistry.CONTEST_DAMAGE,killer),player.getHealth()*100);
             }else{
@@ -118,7 +124,7 @@ public class PlayerConnectionCallback {
       profile.removePlayerTeam(server);
       profile.setLastOnline(System.currentTimeMillis());
       boolean inCombat = profile.getCombatLog() > 0;
-      boolean inContest = WarManager.getActiveContests().stream().anyMatch(contest -> contest.attacker().equals(player) || contest.defender().equals(player));
+      boolean inContest = WarManager.getActiveContests().stream().anyMatch(contest -> contest.attacker().equals(player.getUuid()) || contest.defender().equals(player.getUuid()));
       
       WarManager.cancelPendingContestsFromPlayer(player);
       
@@ -178,6 +184,20 @@ public class PlayerConnectionCallback {
             server.getPlayerManager().broadcast(Text.translatable("text.nations.combat_log_expire",player.getStyledDisplayName()),false);
          }
          Nations.addPlayerKillOnRelog(playerId,MiscUtils.getUUID(combatLogId));
+         
+         WarManager.Contest completedContest = null;
+         UUID winner = null;
+         for(WarManager.Contest contest : WarManager.getActiveContests()){
+            if(contest.isProxy()) continue;
+            UUID attacker = contest.attacker();
+            UUID defender = contest.defender();
+            if(!player.getUuid().equals(attacker) && !player.getUuid().equals(defender)) continue;
+            completedContest = contest;
+            winner = player.getUuid().equals(attacker) ? contest.defender() : contest.attacker();
+         }
+         if(completedContest != null){
+            WarManager.concludeContest(server,completedContest,winner);
+         }
       }else if(player.isAlive()){
          String combatLogId = Nations.getPlayer(player).getCombatLogPlayerId();
          ServerPlayerEntity killer = server.getPlayerManager().getPlayer(MiscUtils.getUUID(combatLogId));
@@ -197,7 +217,6 @@ public class PlayerConnectionCallback {
             LOGOUT_TRACKER.remove(player);
             onCombatLog(player,server);
          }else{
-            System.out.println("Increasing combat log to "+timer+" for "+player);
             LOGOUT_TRACKER.put(player,timer);
          }
       }

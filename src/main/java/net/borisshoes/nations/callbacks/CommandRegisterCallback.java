@@ -149,10 +149,11 @@ public class CommandRegisterCallback {
                   .executes(NationsCommands::leaderboard))
             .then(literal("toggleTrespassAlerts")
                   .executes(NationsCommands::toggleTrespassAlerts))
-            .then(literal("defend").requires(source -> source.hasPermissionLevel(2))
+            .then(literal("defend")
                   .then(argument("x", integer())
                         .then(argument("z", integer())
                               .executes(context -> NationsCommands.defendCapturePoint(context, ChunkSectionPos.from(getInteger(context,"x"),0,getInteger(context,"z")))))))
+            .then(literal("warStatus").executes(NationsCommands::warStatus))
       );
       
       dispatcher.register(Nations.CONFIG.generateCommand());
