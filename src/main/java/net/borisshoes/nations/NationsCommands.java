@@ -13,7 +13,10 @@ import net.borisshoes.nations.land.NationsLand;
 import net.borisshoes.nations.research.ResearchTech;
 import net.borisshoes.nations.utils.ConfigUtils;
 import net.borisshoes.nations.utils.GenericTimer;
+import net.borisshoes.nations.utils.MiscUtils;
 import net.borisshoes.nations.utils.NationsUtils;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.network.packet.c2s.common.SyncedClientOptions;
@@ -23,6 +26,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -101,89 +106,61 @@ public class NationsCommands {
    public static int surveyWholeWorld(CommandContext<ServerCommandSource> ctx){
       try{
          ServerCommandSource src = ctx.getSource();
-         ServerWorld world = src.getWorld();
-         INationsDataComponent nationsData = NATIONS_DATA.get(src.getServer().getOverworld());
-         HashMap<ResourceType,Integer> map = new HashMap<>();
+         ServerWorld world = src.getServer().getOverworld();
+         INationsDataComponent nationsData = NATIONS_DATA.get(world);
          
-         HashMap<ChunkPos,Pair<Triple<Integer,Integer,Integer>,Triple<Integer,Integer,Integer>>> resultsMap = new HashMap<>();
-         HashMap<ChunkPos,Pair<Triple<Integer,Integer,Integer>,Triple<Integer,Integer,Integer>>> chunkMap = new HashMap<>();
+         if(!Nations.isWorldInitialized()){
+            src.sendError(Text.translatable("text.nations.world_not_initialized"));
+            return -1;
+         }
          
-         int radius = NationsConfig.getInt(NationsRegistry.SETTLE_RADIUS_CFG);
-         int count = 1;
+         List<NationChunk> available = new ArrayList<>();
+         List<NationChunk> needsProcessing = new ArrayList<>();
+         long now = System.currentTimeMillis();
          for(NationChunk chunk : nationsData.getChunks()){
-            ChunkPos pos = chunk.getPos();
-            int finalCount = count;
+            if(now - chunk.getLastYieldUpdate() > 3600000 || chunk.getYield().equals(new ImmutableTriple<>(0.0,0.0,0.0))){
+               needsProcessing.add(chunk);
+            }else{
+               available.add(chunk);
+            }
+         }
+         src.sendMessage(Text.translatable("text.nations.preparing_world_survey",available.size(),needsProcessing.size()));
+         
+         int count = 1;
+         int subCount = 0;
+         for(NationChunk chunk : needsProcessing){
             Nations.addTickTimerCallback(world, new GenericTimer(count, () -> {
-               Triple<Integer, Integer, Integer> chunkValues = NationsUtils.calculateChunkCoinGeneration(ctx.getSource().getWorld(), pos);
-               Triple<Integer, Integer, Integer> capValues = new ImmutableTriple<>(0,0,0);
+              chunk.updateYield(world);
+            }));
+            subCount++;
+            if(subCount >= 100){
+               count++;
+            }
+         }
+         
+         Nations.addTickTimerCallback(world, new GenericTimer((count+5), () -> {
+            StringBuilder str = new StringBuilder();
+            
+            for(NationChunk chunk : nationsData.getChunks()){
+               ChunkPos pos = chunk.getPos();
+               Triple<Double,Double,Double> yield = chunk.getYield();
                
+               int capGYield = 0, capMYield = 0, capRYield = 0;
                CapturePoint cap = Nations.getCapturePoint(new ChunkPos(pos.x, pos.z));
                if(cap != null){
                   switch(cap.getType()){
-                     case GROWTH -> capValues = new ImmutableTriple<>(cap.getRawYield(),0,0);
-                     case MATERIAL -> capValues = new ImmutableTriple<>(0,cap.getRawYield(),0);
-                     case RESEARCH -> capValues = new ImmutableTriple<>(0,0,cap.getRawYield());
-                  }
-               }
-               chunkMap.put(new ChunkPos(pos.x, pos.z),new Pair<>(
-                     new ImmutableTriple<>(chunkValues.getLeft(),chunkValues.getMiddle(),chunkValues.getRight()), capValues
-               ));
-               
-            }));
-            count++;
-         }
-         
-         Nations.addTickTimerCallback(world, new GenericTimer((count+2), () -> {
-            for(NationChunk chunk : nationsData.getChunks()){
-               ChunkPos pos = chunk.getPos();
-               int growthRaw = 0;
-               int materialRaw = 0;
-               int researchRaw = 0;
-               int growthCaps = 0;
-               int materialCaps = 0;
-               int researchCaps = 0;
-               
-               for (int dx = -radius; dx <= radius; dx++){
-                  for(int dz = -radius; dz <= radius; dz++){
-                     if(Math.abs(dx) + Math.abs(dz) <= radius){
-                        ChunkPos chunkPos = new ChunkPos(pos.x + dx, pos.z + dz);
-                        if(NationsLand.isOutOfBounds(world.getRegistryKey(), chunkPos)) continue;
-                        Pair<Triple<Integer,Integer,Integer>,Triple<Integer,Integer,Integer>> data = chunkMap.get(chunkPos);
-                        growthRaw += data.getLeft().getLeft();
-                        materialRaw += data.getLeft().getMiddle();
-                        researchRaw += data.getLeft().getRight();
-                        growthCaps += data.getRight().getLeft();
-                        materialCaps += data.getRight().getMiddle();
-                        researchCaps += data.getRight().getRight();
-                     }
+                     case GROWTH -> capGYield = cap.getRawYield();
+                     case MATERIAL -> capMYield = cap.getRawYield();
+                     case RESEARCH -> capRYield = cap.getRawYield();
                   }
                }
                
-               resultsMap.put(pos,new Pair<>(
-                     new ImmutableTriple<>((int) (growthRaw*0.01),(int) (materialRaw*0.01),(int) (researchRaw*0.01)),
-                     new ImmutableTriple<>(growthCaps,materialCaps,researchCaps)
-               ));
+               String dataPoint = "("+pos.x+","+pos.z+", ["+yield.getLeft()+","+yield.getMiddle()+","+yield.getRight()+","+capGYield+","+capMYield+","+capRYield+"])";
+               str.append(dataPoint).append("\n");
             }
             
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter("C:\\Users\\Boris\\Desktop\\data.txt"))){
-               for(Map.Entry<ChunkPos, Pair<Triple<Integer, Integer, Integer>, Triple<Integer, Integer, Integer>>> entry : resultsMap.entrySet()){
-                  ChunkPos pos = entry.getKey();
-                  Triple<Integer, Integer, Integer> raw = entry.getValue().getLeft();
-                  Triple<Integer, Integer, Integer> caps = entry.getValue().getRight();
-                  int growthRaw = raw.getLeft();
-                  int materialRaw = raw.getMiddle();
-                  int researchRaw = raw.getRight();
-                  int growthTotal = raw.getLeft() + caps.getLeft();
-                  int materialTotal = raw.getMiddle() + caps.getMiddle();
-                  int researchTotal = raw.getRight() + caps.getRight();
-                  int rawTotal = growthRaw+materialRaw+researchRaw;
-                  int total = growthTotal+materialTotal+researchTotal;
-                  String dataPoint = "("+pos.x+","+pos.z+", ["+growthRaw+","+materialRaw+","+researchRaw+","+growthTotal+","+materialTotal+","+researchTotal+","+rawTotal+","+total+"])";
-                  writer.write(dataPoint+",");
-               }
-            }catch(Exception e){
-               log(2,e.toString());
-            }
+            src.sendMessage(Text.translatable("text.nations.check_logs"));
+            log(1,str.toString());
          }));
          
          return 1;
@@ -919,11 +896,11 @@ public class NationsCommands {
             }
          }
          
-         Triple<Integer,Integer,Integer> values = NationsUtils.calculateChunkCoinGeneration(player.getServerWorld(),player.getPos(),0);
+         Triple<Double,Double,Double> values = nChunk.getYield();
          src.sendMessage(Text.translatable("text.nations.survey",0,
-               Text.literal(values.getLeft()+" ").append(ResourceType.GROWTH.getText()).formatted(Formatting.GREEN),
-               Text.literal(values.getMiddle()+" ").append(ResourceType.MATERIAL.getText()).formatted(Formatting.GOLD),
-               Text.literal(values.getRight()+" ").append(ResourceType.RESEARCH.getText()).formatted(Formatting.AQUA)));
+               Text.literal(String.format("%,03.2f", values.getLeft())+" ").append(ResourceType.GROWTH.getText()).formatted(Formatting.GREEN),
+               Text.literal(String.format("%,03.2f", values.getMiddle())+" ").append(ResourceType.MATERIAL.getText()).formatted(Formatting.GOLD),
+               Text.literal(String.format("%,03.2f", values.getRight())+" ").append(ResourceType.RESEARCH.getText()).formatted(Formatting.AQUA)));
          
          return 1;
       }catch(Exception e){
@@ -1267,6 +1244,24 @@ public class NationsCommands {
       }
    }
    
+   public static int unclaimCapturePoint(CommandContext<ServerCommandSource> ctx, ChunkSectionPos from){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         CapturePoint cap = Nations.getCapturePoint(from.toChunkPos());
+         
+         if(cap == null){
+            src.sendError(Text.translatable("text.nations.no_cap_error"));
+            return -1;
+         }
+         
+         cap.transferOwnership(src.getServer().getOverworld(),null);
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
    public static int modifyCapturePoint(CommandContext<ServerCommandSource> ctx, double modifier, int duration, ChunkSectionPos chunkPos){
       try{
          ServerCommandSource src = ctx.getSource();
@@ -1402,6 +1397,206 @@ public class NationsCommands {
          ServerCommandSource src = ctx.getSource();
          src.sendMessage(WarManager.getWarStatus(src.getPlayer()));
          return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int claimChunk(CommandContext<ServerCommandSource> ctx, ChunkSectionPos pos){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!src.isExecutedByPlayer()){
+            src.sendError(Text.translatable("text.nations.not_player"));
+            return -1;
+         }
+         if(!Nations.isWorldInitialized()){
+            src.sendError(Text.translatable("text.nations.world_not_initialized"));
+            return -1;
+         }
+         ServerPlayerEntity player = src.getPlayer();
+         ChunkPos chunkPos = pos.toChunkPos();
+         NationChunk chunk = Nations.getChunk(chunkPos);
+         if(chunk == null){
+            src.sendError(Text.translatable("text.nations.chunk_out_of_bounds"));
+            return -1;
+         }
+         
+         Nation playerNation = Nations.getNation(player);
+         if(playerNation == null){
+            src.sendError(Text.translatable("text.nations.no_player_nation_error"));
+            return -1;
+         }
+         
+         if(!chunk.isInfluenced() && playerNation.canClaimOrInfluenceChunk(chunkPos)){
+            boolean claim = chunk.isInfluenced();
+            int cost = NationsUtils.calculateClaimOrInfluenceCost(chunkPos,playerNation,claim);
+            if(MiscUtils.removeItems(player,NationsRegistry.GROWTH_COIN_ITEM,cost)){
+               if(claim){
+                  chunk.setClaimed(true);
+               }else{
+                  chunk.setInfluenced(true);
+                  chunk.setControllingNationId(playerNation.getId());
+               }
+               playerNation.updateChunk(chunk);
+               DynmapCalls.redrawNationBorder(playerNation);
+               player.playSoundToPlayer(SoundEvents.BLOCK_NOTE_BLOCK_PLING.value(), SoundCategory.MASTER,1,claim ? 1.5f : 1.2f);
+            }else{
+               src.sendError(Text.translatable("text.nations.not_enough_growth_coins"));
+               return -1;
+            }
+         }else{
+            boolean claim = chunk.isInfluenced();
+            if(claim){
+               src.sendError(Text.translatable("text.nations.claim_not_enough_nearby"));
+            }else{
+               src.sendError(Text.translatable("text.nations.influence_not_enough_nearby"));
+            }
+            return -1;
+         }
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int unclaimChunks(CommandContext<ServerCommandSource> ctx, String nationId){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         Nation nation = Nations.getNation(nationId);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_nation_error"));
+            return -1;
+         }
+         INationsDataComponent nationsData = NATIONS_DATA.get(src.getServer().getOverworld());
+         ChunkPos foundingChunk = new ChunkPos(nation.getFoundingPos());
+         NationChunk foundingNChunk = Nations.getChunk(foundingChunk);
+         
+         nation.getChunks().clear();
+         nation.getChunks().add(foundingNChunk);
+         
+         for(NationChunk chunk : nationsData.getChunks()){
+            if(chunk.getControllingNation() != null && chunk.getControllingNation().equals(nation) && !chunk.getPos().equals(foundingChunk)){
+               chunk.reset();
+            }
+         }
+         
+         nation.updateChunk(foundingNChunk);
+         DynmapCalls.redrawDynmap();
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+      
+   }
+   
+   public static int resettle(CommandContext<ServerCommandSource> ctx, String nationId, ChunkSectionPos pos){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!Nations.isWorldInitialized()){
+            src.sendError(Text.translatable("text.nations.world_not_initialized"));
+            return -1;
+         }
+         ServerWorld world = src.getServer().getOverworld();
+         ChunkPos chunkPos = pos.toChunkPos();
+         NationChunk newChunk = Nations.getChunk(chunkPos);
+         if(newChunk == null){
+            src.sendError(Text.translatable("text.nations.chunk_out_of_bounds"));
+            return -1;
+         }
+         
+         Nation nation = Nations.getNation(nationId);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_nation_error"));
+            return -1;
+         }
+         
+         if(Nations.getCapturePoint(chunkPos) != null){
+            src.sendError(Text.translatable("text.nations.cannot_settle_on_cap"));
+            return -1;
+         }
+         
+         NationChunk nChunk = Nations.getChunk(chunkPos);
+         if(nChunk.getControllingNation() != null && !nChunk.getControllingNation().equals(nation)){
+            src.sendError(Text.translatable("text.nations.cannot_settle_in_nation"));
+            return -1;
+         }
+         
+         int settleRadius = NationsConfig.getInt(NationsRegistry.SETTLE_RADIUS_CFG);
+         
+         for (int dx = -settleRadius; dx <= settleRadius; dx++) {
+            for (int dz = -settleRadius; dz <= settleRadius; dz++) {
+               if (Math.abs(dx) + Math.abs(dz) <= settleRadius) {
+                  ChunkPos chunkPos2 = new ChunkPos(chunkPos.x + dx, chunkPos.z + dz);
+                  if(NationsLand.isSpawnDMZChunk(chunkPos2.getStartPos())){
+                     src.sendError(Text.translatable("text.nations.cannot_settle_near_spawn"));
+                     return -1;
+                  }
+               }
+            }
+         }
+         
+         nation.resettleNation(world,chunkPos);
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int cacheCheck(CommandContext<ServerCommandSource> ctx){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!Nations.isWorldInitialized()){
+            src.sendError(Text.translatable("text.nations.world_not_initialized"));
+            return -1;
+         }
+         ServerWorld world = src.getServer().getOverworld();
+         
+         List<NationChunk> available = new ArrayList<>();
+         List<NationChunk> needsProcessing = new ArrayList<>();
+         long now = System.currentTimeMillis();
+         for(NationChunk chunk : Nations.getChunks()){
+            if(now - chunk.getLastYieldUpdate() > 3600000 || chunk.getYield().equals(new ImmutableTriple<>(0.0,0.0,0.0))){
+               needsProcessing.add(chunk);
+            }else{
+               available.add(chunk);
+            }
+         }
+         int hitSize = available.size();
+         int missSize = needsProcessing.size();
+         int totalSize = Nations.getChunks().size();
+         double check = (double) (hitSize + missSize) / totalSize * 100.0;
+         double rate = (double) hitSize / (hitSize + missSize) * 100.0;
+         
+         src.sendMessage(Text.translatable("text.nations.cache_check",String.format("%,03.2f",check)+"%", String.format("%,d",totalSize), String.format("%,d",hitSize), String.format("%,d",missSize), String.format("%,03.2f",rate)+"%"));
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int purgeCache(CommandContext<ServerCommandSource> ctx){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!Nations.isWorldInitialized()){
+            src.sendError(Text.translatable("text.nations.world_not_initialized"));
+            return -1;
+         }
+         ServerWorld world = src.getServer().getOverworld();
+         
+         for(NationChunk chunk : Nations.getChunks()){
+            chunk.resetCachedYield();
+         }
+         
+         src.sendMessage(Text.translatable("text.nations.reset_cache"));
+         return cacheCheck(ctx);
       }catch(Exception e){
          log(2,e.toString());
          return -1;

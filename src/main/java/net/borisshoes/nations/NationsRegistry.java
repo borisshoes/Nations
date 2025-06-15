@@ -266,6 +266,21 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> COMBAT_LOG_GRACE_PERIOD_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("combatLogGracePeriod", 15, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
+   public static final NationsConfig.ConfigSetting<?> TICK_RESEARCH_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.BooleanConfigValue("tickResearch", true)));
+   
+   public static final NationsConfig.ConfigSetting<?> CAPTURE_POINT_COIN_GEN_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.BooleanConfigValue("capturePointCoinGeneration", true)));
+   
+   public static final NationsConfig.ConfigSetting<?> MONUMENT_COIN_GEN_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.BooleanConfigValue("monumentCoinGeneration", true)));
+   
+   public static final NationsConfig.ConfigSetting<?> CHUNK_YIELD_MODIFIER_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("chunkYieldModifier", 0.01, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> CHUNK_CACHE_UPDATES_PER_MINUTE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("chunkCacheUpdatesPerMinute", 100.0, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
    // Biome Coin Configs
    
    public static final NationsConfig.ConfigSetting<?> BIOME_COINS_THE_VOID_CFG = registerConfigSetting(new NationsConfig.BiomeConfigSetting<>(

@@ -70,24 +70,20 @@ public class NationsUtils {
    
    public static Triple<Integer,Integer,Integer> calculateChunkCoinGeneration(ServerWorld serverWorld, Vec3d centerPos, int radius){
       ChunkPos centerChunk = new ChunkPos(ChunkSectionPos.getSectionCoordFloored(centerPos.getX()),ChunkSectionPos.getSectionCoordFloored(centerPos.getZ()));
-      int growth = 0, material = 0, research = 0;
-      final double scaleFactor = 0.01;
+      double growth = 0, material = 0, research = 0;
       for (int dx = -radius; dx <= radius; dx++) {
          for (int dz = -radius; dz <= radius; dz++) {
             if (Math.abs(dx) + Math.abs(dz) <= radius) {
                ChunkPos chunkPos = new ChunkPos(centerChunk.x + dx, centerChunk.z + dz);
-               if(NationsLand.isOutOfBounds(serverWorld.getRegistryKey(),chunkPos)) continue;
-               Triple<Integer,Integer,Integer> values = calculateChunkCoinGeneration(serverWorld, chunkPos);
+               if(NationsLand.isOutOfBounds(serverWorld.getRegistryKey(),chunkPos) || Nations.getChunk(chunkPos) == null) continue;
+               Triple<Double,Double,Double> values = Nations.getChunk(chunkPos).getYield();
                growth += values.getLeft();
                material += values.getMiddle();
                research += values.getRight();
             }
          }
       }
-      growth = (int)(growth*scaleFactor);
-      material = (int)(material*scaleFactor);
-      research = (int)(research*scaleFactor);
-      return new ImmutableTriple<>(growth,material,research);
+      return new ImmutableTriple<>((int)growth,(int)material,(int)research);
    }
    
    public static Pair<Triple<Integer,Integer,Integer>,Triple<Integer,Integer,Integer>> calculateCapturePointYields(ServerWorld serverWorld, Vec3d centerPos, int radius){

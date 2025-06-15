@@ -114,11 +114,21 @@ public class InteractionEvents {
       if (interact != ActionResult.PASS)
          return interact;
       BlockPos placePos = new ItemPlacementContext(context).getBlockPos();
-      return itemUseOn(context.getWorld(), player, placePos, context.getStack());
+      return placeBlock(context.getWorld(), player, placePos, context.getStack());
    }
    
    private static ActionResult itemUseOn(World world, ServerPlayerEntity player, BlockPos placePos, ItemStack stack) {
       if(!NationsLand.canUseItemOnBlock(world,player,placePos,stack,true)){
+         BlockState other = world.getBlockState(placePos.up());
+         player.networkHandler.sendPacket(new BlockUpdateS2CPacket(placePos.up(), other));
+         updateHeldItem(player);
+         return ActionResult.FAIL;
+      }
+      return ActionResult.PASS;
+   }
+   
+   private static ActionResult placeBlock(World world, ServerPlayerEntity player, BlockPos placePos, ItemStack stack) {
+      if(!NationsLand.canPlaceBlock(world,player,placePos,stack,true)){
          BlockState other = world.getBlockState(placePos.up());
          player.networkHandler.sendPacket(new BlockUpdateS2CPacket(placePos.up(), other));
          updateHeldItem(player);

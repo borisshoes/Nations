@@ -32,6 +32,9 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -338,6 +341,7 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
       
       List<ResearchTech> techQueue = nation.getTechQueue().stream().toList();
       
+      int queueTicks = 0;
       for(int i = 0; i < 7; i++){
          int index = 46+i;
          
@@ -355,8 +359,9 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
                   .append(Text.translatable("text.nations.coins_per_day").formatted(Formatting.DARK_AQUA))
             );
             int prog = nation.getProgress(tech);
+            int cost = tech.getCost();
             if(prog > 0){
-               float percent = 100 * (float) prog / tech.getCost();
+               float percent = 100 * (float) prog / cost;
                elem.addLoreLine(Text.empty()
                      .append(Text.translatable("text.nations.progress").formatted(Formatting.BLUE))
                      .append(Text.literal(String.format("%,d",prog)+"/"+String.format("%,d",tech.getCost())+" ").formatted(Formatting.AQUA))
@@ -364,6 +369,27 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
                      .append(Text.literal(" ("+String.format("%03.2f",percent)+"%)").formatted(Formatting.AQUA))
                );
             }
+            int completion = cost - prog;
+            int hourRate = tech.getConsumptionRate() / 24;
+            int remRate = tech.getConsumptionRate() % 24;
+            ZonedDateTime now = ZonedDateTime.now(ZoneId.systemDefault());
+            ZonedDateTime startOfNextHour = now.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+            int tickCount = 0;
+            while(completion > 0){
+               ZonedDateTime noon = startOfNextHour.withHour(12).withMinute(0).withSecond(0).withNano(0);
+               if(noon.isEqual(startOfNextHour)){
+                  completion -= remRate;
+               }
+               completion -= hourRate;
+               tickCount++;
+               startOfNextHour = startOfNextHour.plusHours(1);
+            }
+            queueTicks += tickCount;
+            elem.addLoreLine(Text.translatable("text.nations.estimated_completion",
+                  Text.literal(String.format("%,d",queueTicks)+" ").formatted(Formatting.AQUA)
+                        .append(Text.translatable("text.nations.hours").formatted(Formatting.DARK_AQUA))
+            ).formatted(Formatting.BLUE));
+            
             elem.addLoreLine(Text.empty());
             
             if(i > 0){

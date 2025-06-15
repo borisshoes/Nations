@@ -221,7 +221,7 @@ public class CoinPurseItem extends Item implements PolymerItem {
          if(rc > 0){
             lore.add(Text.translatable("text.nations.purse_coin",
                   Text.literal(String.format("%,d",rc)).formatted(Formatting.AQUA,Formatting.BOLD),
-                  Text.translatable(ResourceType.GROWTH.getTranslation()).formatted(Formatting.DARK_AQUA),
+                  Text.translatable(ResourceType.RESEARCH.getTranslation()).formatted(Formatting.DARK_AQUA),
                   Text.translatable("text.nations.coins").formatted(Formatting.DARK_AQUA)
             ).formatted(Formatting.AQUA));
          }

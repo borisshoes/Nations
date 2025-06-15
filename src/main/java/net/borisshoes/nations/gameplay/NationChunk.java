@@ -1,12 +1,18 @@
 package net.borisshoes.nations.gameplay;
 
 import net.borisshoes.nations.Nations;
+import net.borisshoes.nations.NationsConfig;
+import net.borisshoes.nations.NationsRegistry;
+import net.borisshoes.nations.utils.NationsUtils;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtString;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.ChunkPos;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.apache.commons.lang3.tuple.Triple;
 
 import static net.borisshoes.nations.Nations.log;
 
@@ -14,7 +20,6 @@ public class NationChunk {
    
    private final ChunkPos location;
    private String controllingNationId;
-   private String capturePointId;
    private boolean influenced;
    private boolean claimed;
    private int farmlandLvl;
@@ -23,11 +28,12 @@ public class NationChunk {
    private boolean explosionsOverridden;
    private double coinMultiplier;
    private boolean arena;
+   private long lastYieldUpdate = 0;
+   private Triple<Double,Double,Double> yields = new ImmutableTriple<>(0.0,0.0,0.0);
    
    public NationChunk(ChunkPos location){
       this.location = location;
       this.controllingNationId = null;
-      this.capturePointId = null;
       this.influenced = false;
       this.claimed = false;
       this.machinery = false;
@@ -38,10 +44,9 @@ public class NationChunk {
       this.coinMultiplier = 1;
    }
    
-   private NationChunk(ChunkPos location, String controllingNationId, String capturePointId, boolean influenced, boolean claimed, boolean machinery, boolean anchored, boolean explosionsOverridden, boolean arena, int farmlandLvl, double coinMultiplier){
+   private NationChunk(ChunkPos location, String controllingNationId, boolean influenced, boolean claimed, boolean machinery, boolean anchored, boolean explosionsOverridden, boolean arena, int farmlandLvl, double coinMultiplier, long lastUpdate, Triple<Double,Double,Double> yields){
       this.location = location;
       this.controllingNationId = controllingNationId;
-      this.capturePointId = capturePointId;
       this.influenced = influenced;
       this.claimed = claimed;
       this.machinery = machinery;
@@ -50,11 +55,12 @@ public class NationChunk {
       this.farmlandLvl = farmlandLvl;
       this.arena = arena;
       this.coinMultiplier = coinMultiplier;
+      this.lastYieldUpdate = lastUpdate;
+      this.yields = yields;
    }
    
    public void reset(){
       this.controllingNationId = null;
-      this.capturePointId = null;
       this.influenced = false;
       this.claimed = false;
       this.machinery = false;
@@ -155,6 +161,30 @@ public class NationChunk {
       this.coinMultiplier = coinMultiplier;
    }
    
+   public void resetCachedYield(){
+      this.lastYieldUpdate = 0;
+      this.yields = new ImmutableTriple<>(0.0,0.0,0.0);
+   }
+   
+   public long getLastYieldUpdate(){
+      return lastYieldUpdate;
+   }
+   
+   public void updateYield(ServerWorld world){
+      Triple<Integer,Integer,Integer> yields = NationsUtils.calculateChunkCoinGeneration(world,this.location);
+      double modifier = NationsConfig.getDouble(NationsRegistry.CHUNK_YIELD_MODIFIER_CFG);
+      this.yields = new ImmutableTriple<>(yields.getLeft()*modifier,yields.getMiddle()*modifier,yields.getRight()*modifier);
+      lastYieldUpdate = System.currentTimeMillis();
+   }
+   
+   public Triple<Double,Double,Double> getYield(){
+      long now = System.currentTimeMillis();
+      if(now - lastYieldUpdate > 3600000){
+         updateYield(Nations.SERVER.getOverworld());
+      }
+      return this.yields;
+   }
+   
    public Nation getControllingNation(){
       if(controllingNationId == null) return null;
       return Nations.getNation(controllingNationId);
@@ -180,7 +210,6 @@ public class NationChunk {
    public NbtCompound saveToNbt(NbtCompound compound){
       compound.put("pos",getPosNbt());
       compound.putString("nation",controllingNationId == null ? "" : controllingNationId);
-      compound.putString("capturePoint",capturePointId == null ? "" : capturePointId);
       compound.putBoolean("influenced",influenced);
       compound.putBoolean("claimed",claimed);
       compound.putBoolean("machinery",machinery);
@@ -189,6 +218,10 @@ public class NationChunk {
       compound.putBoolean("arena",arena);
       compound.putInt("farmlandLvl",farmlandLvl);
       compound.putDouble("coinMultiplier",coinMultiplier);
+      compound.putDouble("growthYield",yields.getLeft());
+      compound.putDouble("materialYield",yields.getMiddle());
+      compound.putDouble("researchYield",yields.getRight());
+      compound.putLong("lastUpdate",lastYieldUpdate);
       return compound;
    }
    
@@ -196,12 +229,10 @@ public class NationChunk {
       try{
          NbtCompound pos = compound.getCompound("pos");
          String nationId = compound.getString("nation");
-         String capId = compound.getString("capturePoint");
          
          return new NationChunk(
                new ChunkPos(pos.getInt("x"), pos.getInt("z")),
                nationId.isEmpty() ? null : nationId,
-               capId.isEmpty() ? null : capId,
                compound.getBoolean("influenced"),
                compound.getBoolean("claimed"),
                compound.getBoolean("machinery"),
@@ -209,7 +240,9 @@ public class NationChunk {
                compound.getBoolean("explosions"),
                compound.getBoolean("arena"),
                compound.getInt("farmlandLvl"),
-               compound.getDouble("coinMultiplier")
+               compound.getDouble("coinMultiplier"),
+               compound.getLong("lastUpdate"),
+               new ImmutableTriple<>(compound.getDouble("growthYield"),compound.getDouble("materialYield"),compound.getDouble("researchYield"))
          );
       }catch(Exception e){
          log(3,e.toString());

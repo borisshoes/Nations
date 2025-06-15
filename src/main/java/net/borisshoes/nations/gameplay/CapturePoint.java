@@ -131,8 +131,11 @@ public class CapturePoint {
    
    public void hourlyTick(ServerWorld serverWorld){
       if(getControllingNation() != null){
-         this.storedCoins += this.getYield() / 24;
-         this.updateHolo = true;
+         boolean doCoinYield = NationsConfig.getBoolean(NationsRegistry.CAPTURE_POINT_COIN_GEN_CFG);
+         
+         if(doCoinYield){
+            this.storedCoins += this.getYield() / 24;
+         }
       }
       
       List<Pair<Double,Integer>> newModifiers = new ArrayList<>();
@@ -142,13 +145,19 @@ public class CapturePoint {
          }
       }
       this.yieldModifiers = newModifiers;
+      this.updateHolo = true;
    }
    
    public void dailyTick(ServerWorld serverWorld){
       if(getControllingNation() != null){
-         this.storedCoins += this.getYield() % 24;
-         this.updateHolo = true;
+         boolean doCoinYield = NationsConfig.getBoolean(NationsRegistry.CAPTURE_POINT_COIN_GEN_CFG);
+         
+         if(doCoinYield){
+            this.storedCoins += this.getYield() % 24;
+         }
+         
          if(getYield() != 0) getControllingNation().addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_CAP_CFG));
+         this.updateHolo = true;
       }
    }
    
@@ -467,9 +476,16 @@ public class CapturePoint {
    }
    
    public void transferOwnership(World world, Nation newOwner){
-      this.controllingNationId = newOwner.getId();
+      if(newOwner == null){
+         this.controllingNationId = null;
+         this.storedCoins = 0;
+         this.auctionStartTime = 0;
+         this.influence.clear();
+      }else{
+         this.controllingNationId = newOwner.getId();
+      }
       
-      DyeColor newColor = newOwner.getDyeColor();
+      DyeColor newColor = newOwner == null ? DyeColor.WHITE : newOwner.getDyeColor();
       StructurePlacer.Structure structure = Nations.CAPTURE_POINT_STRUCTURES.get(this.type);
       BlockPos origin = chunkPos.getBlockPos(3,this.y,3);
       int[][][] pattern = structure.statePattern();

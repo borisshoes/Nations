@@ -220,6 +220,21 @@ public class NationsLand {
       return needsHandling;
    }
    
+   public static boolean canPlaceBlock(World world, ServerPlayerEntity player, BlockPos pos, ItemStack stack, boolean message){
+      if(isOutOfBounds(world.getRegistryKey(),pos)) return false;
+      if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
+      if(PLAYER_DATA.get(player).bypassesClaims()) return true;
+      ChunkPos chunkPos = new ChunkPos(pos);
+      boolean isClaimed = Nations.isClaimedAgainst(chunkPos, player);
+      boolean isCap = NationsLand.isCapturePointBlock(pos);
+      boolean isNationCenter = NationsLand.isNationCenterBlock(pos);
+      boolean isSpawn = NationsLand.isSpawnChunk(pos);
+      if(!isClaimed && !isCap && !isNationCenter && !isSpawn) return true;
+      
+      if(message) sendPermissionMessage(player, pos);
+      return false;
+   }
+   
    public static boolean canUseItemOnBlock(World world, ServerPlayerEntity player, BlockPos pos, ItemStack stack, boolean message){
       if(isOutOfBounds(world.getRegistryKey(),pos)) return false;
       if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
@@ -513,6 +528,7 @@ public class NationsLand {
       int y = pattern[0].length;
       int z = pattern[0][0].length;
       if(offset.getX() < 0 || offset.getX() >= x || offset.getY() < 0 || offset.getY() >= y || offset.getZ() < 0 || offset.getZ() >= z) return false;
+      if(offset.getX() >= 2 && offset.getX() <= 8 && offset.getZ() >= 2 && offset.getZ() <= 8 && offset.getY() <= 9) return true; // Center area
       int patternInd = pattern[offset.getX()][offset.getY()][offset.getZ()];
       return patternInd != -1 && !structure.blockStates().get(patternInd).isAir();
    }

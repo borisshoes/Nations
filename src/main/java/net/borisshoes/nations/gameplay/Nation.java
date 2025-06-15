@@ -14,6 +14,7 @@ import net.borisshoes.arcananovum.core.ArcanaItem;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
+import net.borisshoes.nations.cca.INationsDataComponent;
 import net.borisshoes.nations.cca.INationsProfileComponent;
 import net.borisshoes.nations.gui.NationGui;
 import net.borisshoes.nations.integration.DynmapCalls;
@@ -25,6 +26,7 @@ import net.borisshoes.nations.utils.NationsColors;
 import net.borisshoes.nations.utils.NationsUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
 import net.minecraft.entity.decoration.DisplayEntity;
@@ -39,6 +41,7 @@ import net.minecraft.nbt.NbtString;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.Potions;
+import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.RegistryWrapper;
@@ -63,6 +66,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static net.borisshoes.nations.Nations.*;
+import static net.borisshoes.nations.cca.WorldDataComponentInitializer.NATIONS_DATA;
 
 public class Nation {
    
@@ -152,37 +156,44 @@ public class Nation {
    
    public void hourlyTick(ServerWorld serverWorld){
       if(isFounded()){
-         Map<ResourceType,Integer> coinYield = calculateCoinYield(serverWorld);
-         coinYield.forEach((key, value) -> this.storedCoins.put(key, this.storedCoins.get(key) + (coinYield.get(key) / 24)));
+         boolean doCoinYield = NationsConfig.getBoolean(NationsRegistry.MONUMENT_COIN_GEN_CFG);
+         boolean doResearch = NationsConfig.getBoolean(NationsRegistry.TICK_RESEARCH_CFG);
          
-         ResearchTech activeTech = getActiveTech();
-         if(activeTech != null){
-            int rate = activeTech.getConsumptionRate() / 24;
-            int progress = getProgress(activeTech);
-            int cost = activeTech.getCost();
-            int remaining = cost - progress;
-            int maxConsumable = Math.min(remaining,rate);
-            int bankConsume = Math.min(maxConsumable,bankedResearchCoins);
-            int consumed = bankConsume;
-            if(bankConsume < maxConsumable){
-               int diff = maxConsumable-bankConsume;
-               int stored = this.storedCoins.get(ResourceType.RESEARCH);
-               int storeConsume = Math.min(stored,diff);
-               consumed += storeConsume;
-               this.storedCoins.put(ResourceType.RESEARCH, stored - storeConsume);
-            }
-            bankedResearchCoins -= bankConsume;
-            techs.put(activeTech,progress+consumed);
-            
-            if(consumed == 0){
-               MutableText warning = Text.translatable("text.nations.no_research_budget").formatted(Formatting.BOLD,Formatting.RED);
-               for(ServerPlayerEntity player : serverWorld.getServer().getPlayerManager().getPlayerList()){
-                  if(hasPlayer(player)){
-                     player.sendMessage(warning);
-                  }
+         if(doCoinYield){
+            Map<ResourceType,Integer> coinYield = calculateCoinYield(serverWorld);
+            coinYield.forEach((key, value) -> this.storedCoins.put(key, this.storedCoins.get(key) + (coinYield.get(key) / 24)));
+         }
+         
+         if(doResearch){
+            ResearchTech activeTech = getActiveTech();
+            if(activeTech != null){
+               int rate = activeTech.getConsumptionRate() / 24;
+               int progress = getProgress(activeTech);
+               int cost = activeTech.getCost();
+               int remaining = cost - progress;
+               int maxConsumable = Math.min(remaining,rate);
+               int bankConsume = Math.min(maxConsumable,bankedResearchCoins);
+               int consumed = bankConsume;
+               if(bankConsume < maxConsumable){
+                  int diff = maxConsumable-bankConsume;
+                  int stored = this.storedCoins.get(ResourceType.RESEARCH);
+                  int storeConsume = Math.min(stored,diff);
+                  consumed += storeConsume;
+                  this.storedCoins.put(ResourceType.RESEARCH, stored - storeConsume);
                }
-            }else if(consumed == remaining){
-               onTechComplete(activeTech);
+               bankedResearchCoins -= bankConsume;
+               techs.put(activeTech,progress+consumed);
+               
+               if(consumed == 0){
+                  MutableText warning = Text.translatable("text.nations.no_research_budget").formatted(Formatting.BOLD,Formatting.RED);
+                  for(ServerPlayerEntity player : serverWorld.getServer().getPlayerManager().getPlayerList()){
+                     if(hasPlayer(player)){
+                        player.sendMessage(warning);
+                     }
+                  }
+               }else if(consumed == remaining){
+                  onTechComplete(activeTech);
+               }
             }
          }
          
@@ -192,30 +203,37 @@ public class Nation {
    
    public void dailyTick(ServerWorld serverWorld){
       if(isFounded()){
-         Map<ResourceType,Integer> coinYield = calculateCoinYield(serverWorld);
-         coinYield.forEach((key, value) -> this.storedCoins.put(key, this.storedCoins.get(key) + (coinYield.get(key) % 24)));
+         boolean doCoinYield = NationsConfig.getBoolean(NationsRegistry.MONUMENT_COIN_GEN_CFG);
+         boolean doResearch = NationsConfig.getBoolean(NationsRegistry.TICK_RESEARCH_CFG);
          
-         ResearchTech activeTech = getActiveTech();
-         if(activeTech != null){
-            int rate = activeTech.getConsumptionRate() / 24;
-            int progress = getProgress(activeTech);
-            int cost = activeTech.getCost();
-            int remaining = cost - progress;
-            int maxConsumable = Math.min(remaining,rate);
-            int bankConsume = Math.min(maxConsumable,bankedResearchCoins);
-            int consumed = bankConsume;
-            if(bankConsume < maxConsumable){
-               int diff = maxConsumable-bankConsume;
-               int stored = this.storedCoins.get(ResourceType.RESEARCH);
-               int storeConsume = Math.min(stored,diff);
-               consumed += storeConsume;
-               this.storedCoins.put(ResourceType.RESEARCH, stored - storeConsume);
-            }
-            bankedResearchCoins -= bankConsume;
-            techs.put(activeTech,progress+consumed);
-            
-            if(consumed == remaining){
-               onTechComplete(activeTech);
+         if(doCoinYield){
+            Map<ResourceType,Integer> coinYield = calculateCoinYield(serverWorld);
+            coinYield.forEach((key, value) -> this.storedCoins.put(key, this.storedCoins.get(key) + (coinYield.get(key) % 24)));
+         }
+         
+         if(doResearch){
+            ResearchTech activeTech = getActiveTech();
+            if(activeTech != null){
+               int rate = activeTech.getConsumptionRate() % 24;
+               int progress = getProgress(activeTech);
+               int cost = activeTech.getCost();
+               int remaining = cost - progress;
+               int maxConsumable = Math.min(remaining,rate);
+               int bankConsume = Math.min(maxConsumable,bankedResearchCoins);
+               int consumed = bankConsume;
+               if(bankConsume < maxConsumable){
+                  int diff = maxConsumable-bankConsume;
+                  int stored = this.storedCoins.get(ResourceType.RESEARCH);
+                  int storeConsume = Math.min(stored,diff);
+                  consumed += storeConsume;
+                  this.storedCoins.put(ResourceType.RESEARCH, stored - storeConsume);
+               }
+               bankedResearchCoins -= bankConsume;
+               techs.put(activeTech,progress+consumed);
+               
+               if(consumed == remaining){
+                  onTechComplete(activeTech);
+               }
             }
          }
          
@@ -224,23 +242,30 @@ public class Nation {
    }
    
    public Map<ResourceType,Integer> calculateCoinYield(ServerWorld serverWorld){
-      HashMap<ResourceType,Integer> coins = new HashMap<>();
+      HashMap<ResourceType,Integer> returned = new HashMap<>();
+      HashMap<ResourceType,Double> coins = new HashMap<>();
+      
       for(ResourceType value : ResourceType.values()){
-         coins.put(value,0);
+         coins.put(value,0.0);
+         returned.put(value,0);
       }
-      if(!isFounded()) return coins;
+      if(!isFounded()){
+         return returned;
+      }
+      
       for(NationChunk chunk : chunks){
          if(chunk.isInfluenced()){
-            Triple<Integer, Integer, Integer> chunkValues = NationsUtils.calculateChunkCoinGeneration(serverWorld, chunk.getPos());
+            Triple<Double,Double,Double> chunkValues = chunk.getYield();
             coins.put(ResourceType.GROWTH,coins.get(ResourceType.GROWTH) + chunkValues.getLeft());
             coins.put(ResourceType.MATERIAL,coins.get(ResourceType.MATERIAL) + chunkValues.getMiddle());
             coins.put(ResourceType.RESEARCH,coins.get(ResourceType.RESEARCH) + chunkValues.getRight());
          }
       }
+      
       for(ResourceType value : ResourceType.values()){
-         coins.put(value, (int) (coins.get(value)*0.01));
+         returned.put(value, coins.get(value).intValue());
       }
-      return coins;
+      return returned;
    }
    
    public Map<ResourceType, Integer> getStoredCoins(){
@@ -848,7 +873,7 @@ public class Nation {
          }
       }
       
-      DynmapCalls.redrawNationBorder(this);
+      DynmapCalls.redrawDynmap();
       
       MutableText announceText = Text.translatable("text.nations.founding_announcement",
             getFormattedNameTag(false),
@@ -856,6 +881,46 @@ public class Nation {
             Text.literal(pos.toString()).withColor(getTextColor())
       ).withColor(getTextColorSub());
       Nations.announce(announceText);
+   }
+   
+   public void resettleNation(ServerWorld world, ChunkPos pos){
+      INationsDataComponent nationsData = NATIONS_DATA.get(world);
+      BlockPos foundingPos = getFoundingPos();
+      ChunkPos foundingChunk = new ChunkPos(foundingPos);
+      NationChunk foundingNChunk = Nations.getChunk(foundingChunk);
+      
+      this.chunks.clear();
+      
+      for(NationChunk chunk : nationsData.getChunks()){
+         if(chunk.getControllingNation() != null && chunk.getControllingNation().equals(this)){
+            chunk.reset();
+         }
+      }
+      
+      StructurePlacer.Structure structure = Nations.NATION_STRUCTURE;
+      int[][][] pattern = structure.statePattern();
+      List<BlockState> states = structure.blockStates();
+      
+      for(int i=0;i<pattern.length;i++){
+         for(int j = 0; j < pattern[0].length; j++){
+            for(int k = 0; k < pattern[0][0].length; k++){
+               int patternInt = pattern[i][j][k];
+               if(patternInt == -1) continue;
+               BlockState templateState = states.get(patternInt);
+               BlockPos actualPos = foundingPos.add(i, j, k);
+               if(!templateState.isAir()){
+                  world.setBlockState(actualPos, Blocks.AIR.getDefaultState());
+               }
+            }
+         }
+      }
+      
+      this.foundLocation = null;
+      settleNation(world,pos);
+      if(this.hologram != null){
+         this.hologram.destroy();
+         this.hologram = null;
+      }
    }
    
    public void onTechComplete(ResearchTech tech){
@@ -1028,15 +1093,23 @@ public class Nation {
    }
    
    public boolean canBrew(Item item, Potion potion){
-      if(!NationsRegistry.LOCKED_POTIONS.containsKey(potion)){
+      Registry<Potion> potionRegistry = SERVER.getRegistryManager().getOrThrow(RegistryKeys.POTION);
+      Potion basePotion = null;
+      for(Potion potionType : potionRegistry){
+         if(potion.getBaseName().equals(potionType.getBaseName()) && potionType.getBaseName().equals(potionRegistry.getId(potionType).getPath())){
+            basePotion = potionType;
+            break;
+         }
+      }
+      if(basePotion == null || !NationsRegistry.LOCKED_POTIONS.containsKey(basePotion)){
          return true;
       }
-      String potionEntryName = SERVER.getRegistryManager().getOrThrow(RegistryKeys.POTION).getEntry(potion).getIdAsString().toLowerCase(Locale.ROOT);
+      String potionEntryName = potionRegistry.getEntry(potion).getIdAsString().toLowerCase(Locale.ROOT);
       boolean strong = false;
       boolean extended = false;
       boolean thrown = false;
       boolean found = false;
-      RegistryKey<ResearchTech> neededTech = NationsRegistry.POTION_TECHS.get(potion);
+      RegistryKey<ResearchTech> neededTech = NationsRegistry.POTION_TECHS.get(basePotion);
       if(neededTech == null) return false;
       for(ResearchTech tech : getCompletedTechs()){
          if(tech.getKey().equals(NationsRegistry.POTENT_ALCHEMY)){

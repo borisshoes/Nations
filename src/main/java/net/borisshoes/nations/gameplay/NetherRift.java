@@ -96,13 +96,20 @@ public class NetherRift {
    }
    
    private void findNewLocation(){
-      List<NationChunk> chunks = new ArrayList<>(Nations.getChunks());
-      Collections.shuffle(chunks);
-      
-      NationChunk chunk = chunks.stream().filter(c -> c.getControllingNation() == null).findFirst().orElse(null);
-      if(chunk == null){
-         chunk = chunks.getFirst();
+      int radius = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
+      NationChunk chunk = null;
+      for(int i = 0; i < 1000; i++){
+         int chunkX = (int) (Math.random() * (2*radius) - radius);
+         int chunkZ = (int) (Math.random() * (2*radius) - radius);
+         chunk = Nations.getChunk(chunkX,chunkZ);
+         if(chunk != null){
+            break;
+         }
       }
+      if(chunk == null){
+         chunk = Nations.getChunks().getFirst();
+      }
+
       int x = overworld.getRandom().nextInt(16);
       int z = overworld.getRandom().nextInt(16);
       int y = 64;

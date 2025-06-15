@@ -7,6 +7,7 @@ import net.borisshoes.nations.cca.INationsDataComponent;
 import net.borisshoes.nations.research.ResearchTech;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 
 import java.time.Instant;
@@ -23,6 +24,7 @@ public class TimedEvents {
    public static void tickTimedEvents(MinecraftServer server){
       INationsDataComponent data = NATIONS_DATA.get(server.getOverworld());
       if(!data.isWorldInitialized()) return;
+      TimedEvents.updateChunkCache(server);
       
       long curTime = System.currentTimeMillis();
       long nextRift = data.getNextRift();
@@ -98,5 +100,28 @@ public class TimedEvents {
       int warmup = NationsConfig.getInt(NationsRegistry.RIFT_WARMUP_CFG);
       Nations.LAST_RIFT = new NetherRift(server.getOverworld(),server.getWorld(World.NETHER),warmup*20L,duration*20L);
       data.setRiftData(Nations.LAST_RIFT.toNbt(new NbtCompound()));
+   }
+   
+   private static void updateChunkCache(MinecraftServer server){
+      ServerWorld world = server.getOverworld();
+      double updatesPerMinute = NationsConfig.getDouble(NationsRegistry.CHUNK_CACHE_UPDATES_PER_MINUTE_CFG);
+      if(updatesPerMinute == 0) return;
+      
+      double updatesPerTick = updatesPerMinute / 1200.0;
+      double total = server.getTicks() * updatesPerTick;
+      double totalLast = (server.getTicks() - 1) * updatesPerTick;
+      int diff = (int) Math.floor(total) - (int) Math.floor(totalLast);
+      
+      int radius = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
+      for(int i = 0; i < diff; i++){
+         int x = (int) (Math.random() * (2*radius) - radius);
+         int z = (int) (Math.random() * (2*radius) - radius);
+         NationChunk chunk = Nations.getChunk(x,z);
+         if(chunk == null){
+            i--;
+         }else{
+            chunk.updateYield(world);
+         }
+      }
    }
 }

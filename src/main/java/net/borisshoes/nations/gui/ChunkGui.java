@@ -145,12 +145,12 @@ public class ChunkGui extends SimpleGui {
          setSlot(i,empty);
       }
       
-      Triple<Integer,Integer,Integer> yields = NationsUtils.calculateChunkCoinGeneration(world,pos);
+      Triple<Double,Double,Double> yields = nationChunk.getYield();
       GuiElementBuilder yieldItem = new GuiElementBuilder(NationsRegistry.RESEARCH_COIN_ITEM).hideDefaultTooltip();
       yieldItem.setName(Text.translatable("gui.nations.chunk_yield_title").formatted(Formatting.BOLD,Formatting.YELLOW));
-      yieldItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,03.2f", yields.getLeft()*0.01)+" ").formatted(Formatting.GREEN,Formatting.BOLD)).append(Text.translatable(ResourceType.GROWTH.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.DARK_GREEN)));
-      yieldItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,03.2f", yields.getMiddle()*0.01)+" ").formatted(Formatting.GOLD,Formatting.BOLD)).append(Text.translatable(ResourceType.MATERIAL.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.RED)));
-      yieldItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,03.2f", yields.getRight()*0.01)+" ").formatted(Formatting.AQUA,Formatting.BOLD)).append(Text.translatable(ResourceType.RESEARCH.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.DARK_AQUA)));
+      yieldItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,03.2f", yields.getLeft())+" ").formatted(Formatting.GREEN,Formatting.BOLD)).append(Text.translatable(ResourceType.GROWTH.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.DARK_GREEN)));
+      yieldItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,03.2f", yields.getMiddle())+" ").formatted(Formatting.GOLD,Formatting.BOLD)).append(Text.translatable(ResourceType.MATERIAL.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.RED)));
+      yieldItem.addLoreLine(Text.empty().append(Text.literal(String.format("%,03.2f", yields.getRight())+" ").formatted(Formatting.AQUA,Formatting.BOLD)).append(Text.translatable(ResourceType.RESEARCH.getTranslation()).append(Text.literal(" ")).append(Text.translatable("text.nations.coins")).formatted(Formatting.DARK_AQUA)));
       
       if(nation != null && nationChunk.isClaimed()){
          int farmLvl = nationChunk.getFarmlandLvl();
