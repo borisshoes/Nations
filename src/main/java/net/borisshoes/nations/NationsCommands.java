@@ -1348,6 +1348,7 @@ public class NationsCommands {
          for(NationsConfig.ConfigSetting<?> configSetting : NationsRegistry.CONFIG_SETTINGS){
             if(configSetting instanceof NationsConfig.ResearchConfigSetting<?> researchConfigSetting){
                RegistryKey<ResearchTech> research = researchConfigSetting.researchKey();
+               if(research == null || NationsRegistry.RESEARCH.get(research) == null) continue;
                if(NationsRegistry.RESEARCH.get(research).getRawTier() == tier || (NationsRegistry.RESEARCH.get(research).getRawTier() != -1 && tier == 0)){
                   for(ConfigUtils.IConfigValue value : CONFIG.values){
                      if(value instanceof ConfigUtils.IntegerConfigValue intValue && value.getName().equals(configSetting.getName()) && value.getName().startsWith("researchRate")){
@@ -1375,6 +1376,7 @@ public class NationsCommands {
          for(NationsConfig.ConfigSetting<?> configSetting : NationsRegistry.CONFIG_SETTINGS){
             if(configSetting instanceof NationsConfig.ResearchConfigSetting<?> researchConfigSetting){
                RegistryKey<ResearchTech> research = researchConfigSetting.researchKey();
+               if(research == null || NationsRegistry.RESEARCH.get(research) == null) continue;
                if(NationsRegistry.RESEARCH.get(research).getRawTier() == tier || (NationsRegistry.RESEARCH.get(research).getRawTier() != -1 && tier == 0)){
                   for(ConfigUtils.IConfigValue value : CONFIG.values){
                      if(value instanceof ConfigUtils.IntegerConfigValue intValue && value.getName().equals(configSetting.getName()) && value.getName().startsWith("researchCost")){
@@ -1427,6 +1429,10 @@ public class NationsCommands {
          Nation playerNation = Nations.getNation(player);
          if(playerNation == null){
             src.sendError(Text.translatable("text.nations.no_player_nation_error"));
+            return -1;
+         }
+         if(!playerNation.hasPermissions(player)){
+            src.sendError(Text.translatable("text.nations.player_not_executor"));
             return -1;
          }
          
