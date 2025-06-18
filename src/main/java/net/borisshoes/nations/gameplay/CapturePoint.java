@@ -136,6 +136,12 @@ public class CapturePoint {
          if(doCoinYield){
             this.storedCoins += this.getYield() / 24;
          }
+         
+         int colonialismLvl = getControllingNation().getBuffLevel(NationsRegistry.COLONIALISM);
+         if(colonialismLvl > 0){
+            double increase = NationsConfig.getDouble(NationsRegistry.COLONIALISM_INCREASE_CFG);
+            addOutputModifier(1+increase*colonialismLvl,2);
+         }
       }
       
       List<Pair<Double,Integer>> newModifiers = new ArrayList<>();
@@ -300,13 +306,15 @@ public class CapturePoint {
    
    public int calculateAttackCost(Nation attacking){
       double attackCost = NationsConfig.getDouble(NationsRegistry.WAR_ATTACK_COST_CFG);
+      double reduction = NationsConfig.getDouble(NationsRegistry.IMPERIALISM_DECREASE_CFG);
       if(this.getControllingNation() == null) return (int) (attackCost*getRawYield());
       Nation owner = getControllingNation();
-      Pair<ChunkPos,Double> attackerMod = calculateNearestInfluence(attacking);
-      Pair<ChunkPos,Double> defenderMod = calculateNearestInfluence(owner);
+      double attackerMod = calculateNearestInfluence(attacking).getRight();
+      double defenderMod = calculateNearestInfluence(owner).getRight();
+      int imperialismLvl = attacking.getBuffLevel(NationsRegistry.IMPERIALISM);
       if(Nations.getChunk(getChunkPos()).getControllingNation() != null) return (int) (attackCost*getRawYield());
-      double costModifier = Math.max(0.25,(defenderMod.getRight() - attackerMod.getRight()) / 2.0 + 1);
-      return (int) (costModifier*attackCost*getRawYield());
+      double costModifier = Math.max(0.25,1 + 4.5*Math.max(0,defenderMod-attackerMod) - 0.5*Math.max(0,attackerMod-defenderMod));
+      return (int) (costModifier*attackCost*getRawYield()*(1-reduction*imperialismLvl));
    }
    
    private void openCapGUI(ServerPlayerEntity player){

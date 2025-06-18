@@ -22,30 +22,46 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
+import org.joml.Vector2d;
+import org.joml.Vector2i;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class NationsUtils {
    
+   public static double calculateCompactnessModifier(double pp, double re){
+      double mid = NationsConfig.getDouble(NationsRegistry.TERRITORY_COMPACTNESS_COST_MIDPOINT_CFG);
+      double maxInc = NationsConfig.getDouble(NationsRegistry.TERRITORY_COMPACTNESS_COST_MAX_INCREASE_CFG);
+      double maxRed = NationsConfig.getDouble(NationsRegistry.TERRITORY_COMPACTNESS_COST_MAX_REDUCTION_CFG);
+      double thresh = NationsConfig.getDouble(NationsRegistry.TERRITORY_COMPACTNESS_MINIMUM_CFG);
+      double combinedCompactness = Math.sqrt(pp*re);
+      double p3 = MiscUtils.calculateThirdTerritoryScaleParameter(thresh,maxInc,mid,1.0,1.0,maxRed);
+      double p1 = (maxInc-1) / (Math.exp(p3*thresh) - Math.exp(p3*mid));
+      double p2 = maxInc - p1 * Math.exp(p3*thresh);
+      double modifier = p2 + p1 * Math.exp(p3*combinedCompactness);
+      return modifier;
+   }
+   
    public static int calculateClaimOrInfluenceCost(ChunkPos chunk, Nation nation, boolean claim){
-      int baseCost = claim ? NationsConfig.getInt(NationsRegistry.CLAIM_COIN_COST_CFG) : NationsConfig.getInt(NationsRegistry.INFLUENCE_COIN_COST_CFG);
-      double chunkDeduction = 0;
-      double chunkAppreciation = nation.getChunks().size();
-      
-      for(int i = -2; i <= 2; i++){
-         for(int j = -2; j <= 2; j++){
-            NationChunk nChunk = Nations.getChunk(chunk.x+i,chunk.z+j);
-            if((i==0 && j==0) || nChunk == null || !nation.equals(nChunk.getControllingNation())) continue;
-            if(nChunk.isClaimed()){
-               chunkDeduction += 2;
-            }else if(nChunk.isInfluenced()){
-               chunkDeduction += 1;
-            }
-         }
+      if(claim){
+         return NationsConfig.getInt(NationsRegistry.CLAIM_COIN_COST_CFG);
       }
-      chunkAppreciation *= NationsConfig.getDouble(NationsRegistry.TERRITORY_CHUNK_APPRECIATION_CFG);
-      chunkDeduction *= NationsConfig.getDouble(NationsRegistry.TERRITORY_CHUNK_DEDUCTION_CFG);
-      double finalCost = baseCost * (1 + chunkAppreciation) * (1 - chunkDeduction);
+      int baseCost = NationsConfig.getInt(NationsRegistry.INFLUENCE_COIN_COST_CFG);
+      double modifier = NationsConfig.getDouble(NationsRegistry.TERRITORY_COST_MODIFIER_CFG);
+      int manifestLvl = nation.getBuffLevel(NationsRegistry.MANIFEST_DESTINY);
+      double manifestReduction = NationsConfig.getDouble(NationsRegistry.MANIFEST_DESTINY_REDUCTION_CFG);
+      
+      Set<NationChunk> chunks = nation.getChunks();
+      List<Vector2i> chunkCoords = chunks.stream().map(c -> new Vector2i(c.getPos().x,c.getPos().z)).collect(Collectors.toCollection(ArrayList::new));
+      
+      Vector2d centroid = MiscUtils.calculateCentroid(chunkCoords);
+      double distance = centroid.distance(chunk.x,chunk.z);
+      double pp = MiscUtils.calculatePolsbyPopper(chunkCoords);
+      double re = MiscUtils.calculateReock(chunkCoords);
+      double compactnessMod = calculateCompactnessModifier(pp,re);
+      double finalCost = baseCost * compactnessMod * modifier * distance * (1 - manifestReduction*manifestLvl);
+
       return (int) Math.max(0,finalCost);
    }
    

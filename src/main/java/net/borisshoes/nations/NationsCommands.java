@@ -40,6 +40,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Heightmap;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
+import org.joml.Vector2i;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -49,6 +50,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static net.borisshoes.nations.Nations.*;
 import static net.borisshoes.nations.cca.PlayerComponentInitializer.PLAYER_DATA;
@@ -1450,7 +1452,7 @@ public class NationsCommands {
             if(claim){
                src.sendError(Text.translatable("text.nations.claim_not_enough_nearby"));
             }else{
-               src.sendError(Text.translatable("text.nations.influence_not_enough_nearby"));
+               src.sendError(Text.translatable("text.nations.cannot_influence"));
             }
             return -1;
          }
@@ -1597,6 +1599,132 @@ public class NationsCommands {
          
          src.sendMessage(Text.translatable("text.nations.reset_cache"));
          return cacheCheck(ctx);
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int nationInfo(CommandContext<ServerCommandSource> ctx, String nationId){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         Nation nation = Nations.getNation(nationId);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_nation_error"));
+            return -1;
+         }
+         if(!nation.isFounded()){
+            src.sendError(Text.translatable("text.nations.nation_not_founded_error"));
+            return -1;
+         }
+         
+         String foundingPos = nation.getFoundingPos().toShortString();
+         List<Vector2i> chunkCoords = nation.getChunks().stream().map(c -> new Vector2i(c.getPos().x,c.getPos().z)).collect(Collectors.toCollection(ArrayList::new));
+         int influenceCount = (int) nation.getChunks().stream().filter(c -> nation.equals(c.getControllingNation()) && c.isInfluenced()).count();
+         int claimCount = (int) nation.getChunks().stream().filter(c -> nation.equals(c.getControllingNation()) && c.isClaimed()).count();
+         double ppScore = MiscUtils.calculatePolsbyPopper(chunkCoords);
+         double reScore = MiscUtils.calculateReock(chunkCoords);
+         double combined = Math.sqrt(ppScore*reScore);
+         int vp = nation.getVictoryPoints();
+         Map<ResourceType,Integer> coinYield = nation.calculateCoinYield(src.getServer().getOverworld());
+         Map<ResourceType,Pair<Integer,Integer>> caps = new HashMap<>();
+         int capCount = 0;
+         for(CapturePoint cap : getCapturePoints()){
+            if(cap.getControllingNation() == null || !cap.getControllingNation().equals(nation)) continue;
+            Pair<Integer,Integer> curCount = caps.getOrDefault(cap.getType(),new Pair<>(0,0));
+            caps.put(cap.getType(),new Pair<>(curCount.getLeft()+1,curCount.getRight()+cap.getYield()));
+            capCount++;
+         }
+         ResearchTech activeTech = nation.getActiveTech();
+         MutableText researchText = activeTech == null ? Text.translatable("text.nations.nothing") : activeTech.getName();
+         float researchPercentage = activeTech == null ? 0 : 100*((float) nation.getProgress(activeTech) / activeTech.getCost());
+         Map<RegistryKey<ResearchTech>,ResearchTech> buffs = new HashMap<>();
+         for(ResearchTech completedTech : nation.getCompletedTechs()){
+            if(!completedTech.isBuff()) continue;
+            RegistryKey<ResearchTech> buff = completedTech.getBuff();
+            int tier = completedTech.getTier();
+            if(!buffs.containsKey(buff) || (buffs.get(buff).getTier() < tier)){
+               buffs.put(buff,completedTech);
+            }
+         }
+         ArrayList<ResearchTech> sortedBuffs = new ArrayList<>(buffs.values());
+         sortedBuffs.sort(Comparator.comparingInt(b -> -b.getTier()));
+         ArrayList<ResearchTech> sortedResearch = new ArrayList<>(nation.getCompletedTechs());
+         sortedResearch.sort(ResearchTech.COMPARATOR);
+         int mainColor = nation.getTextColor();
+         int subColor = nation.getTextColorSub();
+         
+         src.sendMessage(nation.getFormattedNameTag(false));
+         src.sendMessage(Text.translatable("text.nations.settled_at",Text.literal(foundingPos).withColor(subColor)).withColor(mainColor));
+         src.sendMessage(Text.translatable("text.nations.territory_count",
+               Text.translatable("text.nations.influence_count",String.format("%,d",influenceCount)).withColor(subColor),
+               Text.translatable("text.nations.claim_count",String.format("%,d",claimCount)).withColor(subColor)
+         ).withColor(mainColor));
+         src.sendMessage(Text.translatable("text.nations.compactness_count",
+               Text.translatable("text.nations.pp_count",String.format("%03.2f",ppScore*100)).withColor(subColor),
+               Text.translatable("text.nations.reock_count",String.format("%03.2f",reScore*100)).withColor(subColor),
+               Text.translatable("text.nations.combined_count",String.format("%03.2f",combined*100)).withColor(subColor)
+         ).withColor(mainColor));
+         src.sendMessage(Text.translatable("text.nations.victory_points").formatted(Formatting.DARK_PURPLE).append(Text.literal(": ")
+               .append(Text.literal(String.format("%,d",vp)).formatted(Formatting.LIGHT_PURPLE))
+         ));
+         src.sendMessage(Text.translatable("text.nations.yield_report",
+               Text.literal(coinYield.get(ResourceType.GROWTH)+" ").append(ResourceType.GROWTH.getText()).formatted(Formatting.GREEN),
+               Text.literal(coinYield.get(ResourceType.MATERIAL)+" ").append(ResourceType.MATERIAL.getText()).formatted(Formatting.GOLD),
+               Text.literal(coinYield.get(ResourceType.RESEARCH)+" ").append(ResourceType.RESEARCH.getText()).formatted(Formatting.AQUA)
+         ).withColor(mainColor));
+         src.sendMessage(Text.translatable("text.nations.cap_report",capCount,
+               Text.literal(String.format("%,d",caps.get(ResourceType.GROWTH).getRight())+" ").append(ResourceType.GROWTH.getText()).append(Text.literal(" ("+String.format("%,d",caps.get(ResourceType.GROWTH).getLeft())+")")).formatted(Formatting.GREEN),
+               Text.literal(String.format("%,d",caps.get(ResourceType.MATERIAL).getRight())+" ").append(ResourceType.MATERIAL.getText()).append(Text.literal(" ("+String.format("%,d",caps.get(ResourceType.MATERIAL).getLeft())+")")).formatted(Formatting.GOLD),
+               Text.literal(String.format("%,d",caps.get(ResourceType.RESEARCH).getRight())+" ").append(ResourceType.RESEARCH.getText()).append(Text.literal(" ("+String.format("%,d",caps.get(ResourceType.RESEARCH).getLeft())+")")).formatted(Formatting.AQUA)
+         ).withColor(mainColor));
+         src.sendMessage(Text.translatable("text.nations.currently_researching",
+               researchText.formatted(Formatting.LIGHT_PURPLE),
+               Text.literal(String.format("%03.2f",researchPercentage)).formatted(Formatting.AQUA,Formatting.BOLD)
+         ).formatted(Formatting.DARK_AQUA));
+         src.sendMessage(Text.translatable("text.nations.nation_buffs").withColor(mainColor));
+         for(ResearchTech value : sortedBuffs){
+            src.sendMessage(Text.literal(" - ").withColor(subColor).append(value.getName().withColor(mainColor)));
+         }
+         src.sendMessage(Text.translatable("text.nations.completed_research").withColor(mainColor));
+         MutableText researchList = Text.literal("");
+         for(ResearchTech research : sortedResearch){
+            Formatting formatting = Formatting.GREEN;
+            if(research.isBuff()){
+               formatting = Formatting.GOLD;
+            }else if(research.isArcanaItem()){
+               formatting = Formatting.LIGHT_PURPLE;
+            }else if(research.isEnchant()){
+               formatting = Formatting.AQUA;
+            }else if(research.isPotion()){
+               formatting = Formatting.DARK_AQUA;
+            }
+            researchList.append(research.getName().formatted(formatting)).append(Text.literal(", ").withColor(subColor));
+         }
+         src.sendMessage(researchList);
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
+   public static int nationInfo(CommandContext<ServerCommandSource> ctx){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!src.isExecutedByPlayer()){
+            src.sendError(Text.translatable("text.nations.not_player"));
+            return -1;
+         }
+         ServerPlayerEntity player = src.getPlayer();
+         Nation nation = Nations.getNation(player);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_player_nation_error"));
+            return -1;
+         }
+         
+         return nationInfo(ctx,nation.getId());
       }catch(Exception e){
          log(2,e.toString());
          return -1;

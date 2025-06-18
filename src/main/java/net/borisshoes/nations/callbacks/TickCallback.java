@@ -116,6 +116,7 @@ public class TickCallback {
                      if(profile.getNation() != null){
                         for(RegistryEntry<Enchantment> enchantment : newEnchants.getEnchantments()){
                            int level = newEnchants.getLevel(enchantment);
+                           if(level > enchantment.value().getMaxLevel()) continue;
                            int newLevel = 1;
                            for(int j = level; j >= 1; j--){
                               boolean canSupport = profile.getNation().canEnchant(enchantment.getKey().get(),j);

@@ -213,6 +213,7 @@ public class NationsProfileComponent implements INationsProfileComponent{
    
    @Override
    public void resetCombatLog(PlayerEntity attacker){
+      if(player.isCreative() || player.isSpectator() || attacker.equals(player)) return;
       boolean inCombat = this.combatLog > 0;
       int duration = NationsConfig.getInt(NationsRegistry.COMBAT_LOG_DURATION_CFG);
       this.combatLog = duration * 20;

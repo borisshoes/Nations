@@ -3,6 +3,7 @@ package net.borisshoes.nations;
 import com.mojang.serialization.Lifecycle;
 import eu.pb4.polymer.core.api.item.PolymerItemGroupUtils;
 import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
+import it.unimi.dsi.fastutil.Hash;
 import net.borisshoes.ancestralarchetypes.ArchetypeRegistry;
 import net.borisshoes.arcananovum.ArcanaRegistry;
 import net.borisshoes.arcananovum.core.ArcanaItem;
@@ -57,6 +58,7 @@ public class NationsRegistry {
    public static final HashMap<ArcanaItem,RegistryKey<ResearchTech>> ARCANA_TECHS = new HashMap<>();
    public static final HashMap<Pair<RegistryKey<Enchantment>,Integer>,RegistryKey<ResearchTech>> ENCHANT_TECHS = new HashMap<>();
    public static final HashMap<RegistryKey<Enchantment>, Item> ENCHANT_ITEM_MAP = new HashMap<>();
+   public static final HashMap<RegistryKey<ResearchTech>, HashMap<Integer,RegistryKey<ResearchTech>>> NATION_BUFFS = new HashMap<>();
    
    public static final ChunkTicketType<ChunkPos> TICKET_TYPE = ChunkTicketType.create("nations.anchored", Comparator.comparingLong(ChunkPos::toLong));
    
@@ -126,6 +128,54 @@ public class NationsRegistry {
    public static final RegistryKey<ResearchTech> BASIC_AUGMENTATION = of("basic_augmentation");
    public static final RegistryKey<ResearchTech> ENHANCED_AUGMENTATION = of("enhanced_augmentation");
    public static final RegistryKey<ResearchTech> ADVANCED_AUGMENTATION = of("advanced_augmentation");
+   public static final RegistryKey<ResearchTech> MANIFEST_DESTINY = of("manifest_destiny");
+   public static final RegistryKey<ResearchTech> AGRICULTURE = of("agriculture");
+   public static final RegistryKey<ResearchTech> INFRASTRUCTURE = of("infrastructure");
+   public static final RegistryKey<ResearchTech> PUBLIC_EDUCATION = of("public_education");
+   public static final RegistryKey<ResearchTech> IMPERIALISM = of("imperialism");
+   public static final RegistryKey<ResearchTech> COLONIALISM = of("colonialism");
+   public static final RegistryKey<ResearchTech> SCHOLARSHIP = of("scholarship");
+   public static final RegistryKey<ResearchTech> BARTERING = of("bartering");
+   public static final RegistryKey<ResearchTech> MANIFEST_DESTINY_1 = of("manifest_destiny_1");
+   public static final RegistryKey<ResearchTech> AGRICULTURE_1 = of("agriculture_1");
+   public static final RegistryKey<ResearchTech> INFRASTRUCTURE_1 = of("infrastructure_1");
+   public static final RegistryKey<ResearchTech> PUBLIC_EDUCATION_1 = of("public_education_1");
+   public static final RegistryKey<ResearchTech> IMPERIALISM_1 = of("imperialism_1");
+   public static final RegistryKey<ResearchTech> COLONIALISM_1 = of("colonialism_1");
+   public static final RegistryKey<ResearchTech> SCHOLARSHIP_1 = of("scholarship_1");
+   public static final RegistryKey<ResearchTech> BARTERING_1 = of("bartering_1");
+   public static final RegistryKey<ResearchTech> MANIFEST_DESTINY_2 = of("manifest_destiny_2");
+   public static final RegistryKey<ResearchTech> AGRICULTURE_2 = of("agriculture_2");
+   public static final RegistryKey<ResearchTech> INFRASTRUCTURE_2 = of("infrastructure_2");
+   public static final RegistryKey<ResearchTech> PUBLIC_EDUCATION_2 = of("public_education_2");
+   public static final RegistryKey<ResearchTech> IMPERIALISM_2 = of("imperialism_2");
+   public static final RegistryKey<ResearchTech> COLONIALISM_2 = of("colonialism_2");
+   public static final RegistryKey<ResearchTech> SCHOLARSHIP_2 = of("scholarship_2");
+   public static final RegistryKey<ResearchTech> BARTERING_2 = of("bartering_2");
+   public static final RegistryKey<ResearchTech> MANIFEST_DESTINY_3 = of("manifest_destiny_3");
+   public static final RegistryKey<ResearchTech> AGRICULTURE_3 = of("agriculture_3");
+   public static final RegistryKey<ResearchTech> INFRASTRUCTURE_3 = of("infrastructure_3");
+   public static final RegistryKey<ResearchTech> PUBLIC_EDUCATION_3 = of("public_education_3");
+   public static final RegistryKey<ResearchTech> IMPERIALISM_3 = of("imperialism_3");
+   public static final RegistryKey<ResearchTech> COLONIALISM_3 = of("colonialism_3");
+   public static final RegistryKey<ResearchTech> SCHOLARSHIP_3 = of("scholarship_3");
+   public static final RegistryKey<ResearchTech> BARTERING_3 = of("bartering_3");
+   public static final RegistryKey<ResearchTech> MANIFEST_DESTINY_4 = of("manifest_destiny_4");
+   public static final RegistryKey<ResearchTech> AGRICULTURE_4 = of("agriculture_4");
+   public static final RegistryKey<ResearchTech> INFRASTRUCTURE_4 = of("infrastructure_4");
+   public static final RegistryKey<ResearchTech> PUBLIC_EDUCATION_4 = of("public_education_4");
+   public static final RegistryKey<ResearchTech> IMPERIALISM_4 = of("imperialism_4");
+   public static final RegistryKey<ResearchTech> COLONIALISM_4 = of("colonialism_4");
+   public static final RegistryKey<ResearchTech> SCHOLARSHIP_4 = of("scholarship_4");
+   public static final RegistryKey<ResearchTech> BARTERING_4 = of("bartering_4");
+   public static final RegistryKey<ResearchTech> MANIFEST_DESTINY_5 = of("manifest_destiny_5");
+   public static final RegistryKey<ResearchTech> AGRICULTURE_5 = of("agriculture_5");
+   public static final RegistryKey<ResearchTech> INFRASTRUCTURE_5 = of("infrastructure_5");
+   public static final RegistryKey<ResearchTech> PUBLIC_EDUCATION_5 = of("public_education_5");
+   public static final RegistryKey<ResearchTech> IMPERIALISM_5 = of("imperialism_5");
+   public static final RegistryKey<ResearchTech> COLONIALISM_5 = of("colonialism_5");
+   public static final RegistryKey<ResearchTech> SCHOLARSHIP_5 = of("scholarship_5");
+   public static final RegistryKey<ResearchTech> BARTERING_5 = of("bartering_5");
    
    /*
     ======= Config Settings =======
@@ -174,7 +224,7 @@ public class NationsRegistry {
          new ConfigUtils.IntegerConfigValue("capturePointAuctionDuration", 1440, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    
    public static final NationsConfig.ConfigSetting<?> CAPTURE_POINT_INFLUENCE_DISTANCE_MOD_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.DoubleConfigValue("capturePointInfluenceDistanceModifier", 25.0, new ConfigUtils.DoubleConfigValue.DoubleLimits(0))));
+         new ConfigUtils.DoubleConfigValue("capturePointInfluenceDistanceModifier", 50.0, new ConfigUtils.DoubleConfigValue.DoubleLimits(0))));
    
    public static final NationsConfig.ConfigSetting<?> CAPTURE_POINT_AUCTION_MOD_MIN_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.DoubleConfigValue("capturePointAuctionModifierMinimum", 0.5, new ConfigUtils.DoubleConfigValue.DoubleLimits(0,2))));
@@ -185,11 +235,20 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> INFLUENCE_COIN_COST_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("influenceCoinCost", 100, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    
-   public static final NationsConfig.ConfigSetting<?> TERRITORY_CHUNK_DEDUCTION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.DoubleConfigValue("territoryChunkDeduction", 0.02, new ConfigUtils.DoubleConfigValue.DoubleLimits(0))));
+   public static final NationsConfig.ConfigSetting<?> TERRITORY_COMPACTNESS_MINIMUM_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("territoryCompactnessMinimum", 0.25, new ConfigUtils.DoubleConfigValue.DoubleLimits(0,1))));
    
-   public static final NationsConfig.ConfigSetting<?> TERRITORY_CHUNK_APPRECIATION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.DoubleConfigValue("territoryChunkAppreciation", 0.01, new ConfigUtils.DoubleConfigValue.DoubleLimits(0))));
+   public static final NationsConfig.ConfigSetting<?> TERRITORY_COMPACTNESS_COST_MIDPOINT_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("territoryCompactnessCostMidpoint", 0.5, new ConfigUtils.DoubleConfigValue.DoubleLimits(1e-12,1-1e-12))));
+   
+   public static final NationsConfig.ConfigSetting<?> TERRITORY_COMPACTNESS_COST_MAX_REDUCTION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("territoryCompactnessCostMaxReduction", 0.75, new ConfigUtils.DoubleConfigValue.DoubleLimits(0,1.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> TERRITORY_COMPACTNESS_COST_MAX_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("territoryCompactnessCostMaxIncrease", 5.0, new ConfigUtils.DoubleConfigValue.DoubleLimits(1.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> TERRITORY_COST_MODIFIER_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("territoryCostModifier", 0.3, new ConfigUtils.DoubleConfigValue.DoubleLimits(0))));
    
    public static final NationsConfig.ConfigSetting<?> IMPROVEMENT_FARMLAND_COST_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("improvementFarmlandCost", 250, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
@@ -280,6 +339,33 @@ public class NationsRegistry {
    
    public static final NationsConfig.ConfigSetting<?> CHUNK_CACHE_UPDATES_PER_MINUTE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.DoubleConfigValue("chunkCacheUpdatesPerMinute", 100.0, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> MANIFEST_DESTINY_REDUCTION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("manifestDestinyReduction", 0.1, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> AGRICULTURE_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("agricultureIncrease", 0.15, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> INFRASTRUCTURE_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("infrastructureIncrease", 0.15, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> PUBLIC_EDUCATION_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("publicEducationIncrease", 0.15, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> IMPERIALISM_DECREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("imperialismDecrease", 0.1, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> COLONIALISM_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("colonialismIncrease", 0.2, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> SCHOLARSHIP_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("scholarshipIncrease", 0.05, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> BARTERING_DISCOUNT_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("barteringDiscount", 0.15, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> BARTERING_CONVERSION_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("barteringConversionIncrease", 0.125, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
    
    // Biome Coin Configs
    
@@ -668,53 +754,80 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_ENCHANTMENTS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("researchRateEnchantments", 5000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
    
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_TIER_1_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchCostTier1Buff", 1000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_TIER_1_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchRateTier1Buff", 1000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_TIER_2_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchCostTier2Buff", 3500, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_TIER_2_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchRateTier2Buff", 2500, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_TIER_3_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchCostTier3Buff", 5000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_TIER_3_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchRateTier3Buff", 4000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_TIER_4_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchCostTier4Buff", 7500, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_TIER_4_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchRateTier4Buff", 6000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_COST_TIER_5_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchCostTier5Buff", 10000, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   public static final NationsConfig.ConfigSetting<?> RESEARCH_RATE_TIER_5_BUFF_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("researchRateTier5Buff", 7500, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
    static{
       registerTech(MECHANICS, new ResearchTech(MECHANICS,1,new RegistryKey[]{},RESEARCH_COST_MECHANICS_CFG,RESEARCH_RATE_MECHANICS_CFG).withShowStack(Items.PISTON)
             .addCraftLock(Items.PISTON, Items.STICKY_PISTON, Items.DISPENSER, Items.DROPPER));
-      registerTech(BRONZEWORKING, new ResearchTech(BRONZEWORKING,1,new RegistryKey[]{},RESEARCH_COST_BRONZEWORKING_CFG,RESEARCH_RATE_BRONZEWORKING_CFG).withShowStack(Items.IRON_SWORD)
-            .addCraftLock(Items.IRON_AXE, Items.IRON_SWORD));
-      registerTech(STEELWORKING, new ResearchTech(STEELWORKING,1,new RegistryKey[]{},RESEARCH_COST_STEELWORKING_CFG,RESEARCH_RATE_STEELWORKING_CFG).withShowStack(Items.IRON_CHESTPLATE)
-            .addCraftLock(Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS));
+//      registerTech(BRONZEWORKING, new ResearchTech(BRONZEWORKING,1,new RegistryKey[]{},RESEARCH_COST_BRONZEWORKING_CFG,RESEARCH_RATE_BRONZEWORKING_CFG).withShowStack(Items.IRON_SWORD)
+//            .addCraftLock(Items.IRON_AXE, Items.IRON_SWORD));
+//      registerTech(STEELWORKING, new ResearchTech(STEELWORKING,1,new RegistryKey[]{},RESEARCH_COST_STEELWORKING_CFG,RESEARCH_RATE_STEELWORKING_CFG).withShowStack(Items.IRON_CHESTPLATE)
+//            .addCraftLock(Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS));
       registerTech(ARCHERY, new ResearchTech(ARCHERY,1,new RegistryKey[]{},RESEARCH_COST_ARCHERY_CFG,RESEARCH_RATE_ARCHERY_CFG).withShowStack(Items.BOW)
             .addCraftLock(Items.BOW, Items.ARROW));
       registerTech(BLACK_POWDER, new ResearchTech(BLACK_POWDER,1,new RegistryKey[]{},RESEARCH_COST_BLACK_POWDER_CFG,RESEARCH_RATE_BLACK_POWDER_CFG).withShowStack(Items.TNT)
             .addCraftLock(Items.TNT, Items.FIREWORK_ROCKET, Items.FIREWORK_STAR));
-      
-      registerTech(SEMICONDUCTORS, new ResearchTech(SEMICONDUCTORS,2,new RegistryKey[]{MECHANICS},RESEARCH_COST_SEMICONDUCTORS_CFG,RESEARCH_RATE_SEMICONDUCTORS_CFG).withShowStack(Items.REPEATER)
-            .addCraftLock(Items.REPEATER, Items.DAYLIGHT_DETECTOR));
-      registerTech(ANCIENT_ALLOY, new ResearchTech(ANCIENT_ALLOY,2,new RegistryKey[]{},RESEARCH_COST_ANCIENT_ALLOY_CFG,RESEARCH_RATE_ANCIENT_ALLOY_CFG).withShowStack(Items.NETHERITE_INGOT)
-            .addCraftLock(Items.NETHERITE_INGOT, Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE));
-      registerTech(CRYSTAL_COMPOSITE, new ResearchTech(CRYSTAL_COMPOSITE,2,new RegistryKey[]{BRONZEWORKING},RESEARCH_COST_CRYSTAL_COMPOSITE_CFG,RESEARCH_RATE_CRYSTAL_COMPOSITE_CFG).withShowStack(Items.DIAMOND_SWORD)
-            .addCraftLock(Items.DIAMOND_SWORD, Items.DIAMOND_AXE));
-      registerTech(HARDENED_PLATES, new ResearchTech(HARDENED_PLATES,2,new RegistryKey[]{STEELWORKING},RESEARCH_COST_HARDENED_PLATES_CFG,RESEARCH_RATE_HARDENED_PLATES_CFG).withShowStack(Items.DIAMOND_CHESTPLATE)
-            .addCraftLock(Items.DIAMOND_HELMET, Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS, Items.DIAMOND_BOOTS));
-      registerTech(FIBERGLASS_COMPOSITE, new ResearchTech(FIBERGLASS_COMPOSITE,2,new RegistryKey[]{ARCHERY},RESEARCH_COST_FIBERGLASS_COMPOSITE_CFG,RESEARCH_RATE_FIBERGLASS_COMPOSITE_CFG).withShowStack(Items.CROSSBOW)
-            .addCraftLock(Items.CROSSBOW));
-      registerTech(BASIC_ALCHEMY, new ResearchTech(BASIC_ALCHEMY,2,new RegistryKey[]{},RESEARCH_COST_BASIC_ALCHEMY_CFG,RESEARCH_RATE_BASIC_ALCHEMY_CFG).withShowStack(Items.BREWING_STAND)
+      registerTech(BASIC_ALCHEMY, new ResearchTech(BASIC_ALCHEMY,1,new RegistryKey[]{},RESEARCH_COST_BASIC_ALCHEMY_CFG,RESEARCH_RATE_BASIC_ALCHEMY_CFG).withShowStack(Items.BREWING_STAND)
             .addCraftLock(Items.BREWING_STAND)
             .addPotionLock(Potions.AWKWARD,Potions.WATER,Potions.MUNDANE,Potions.THICK,Potions.WATER_BREATHING,Potions.FIRE_RESISTANCE,Potions.NIGHT_VISION,Potions.LEAPING,Potions.SLOW_FALLING));
+      registerTech(ANCIENT_ALLOY, new ResearchTech(ANCIENT_ALLOY,1,new RegistryKey[]{},RESEARCH_COST_ANCIENT_ALLOY_CFG,RESEARCH_RATE_ANCIENT_ALLOY_CFG).withShowStack(Items.NETHERITE_INGOT)
+            .addCraftLock(Items.NETHERITE_INGOT, Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE));
+      registerTech(CRYSTAL_COMPOSITE, new ResearchTech(CRYSTAL_COMPOSITE,1,new RegistryKey[]{BRONZEWORKING},RESEARCH_COST_CRYSTAL_COMPOSITE_CFG,RESEARCH_RATE_CRYSTAL_COMPOSITE_CFG).withShowStack(Items.DIAMOND_SWORD)
+            .addCraftLock(Items.DIAMOND_SWORD, Items.DIAMOND_AXE));
+      registerTech(HARDENED_PLATES, new ResearchTech(HARDENED_PLATES,1,new RegistryKey[]{STEELWORKING},RESEARCH_COST_HARDENED_PLATES_CFG,RESEARCH_RATE_HARDENED_PLATES_CFG).withShowStack(Items.DIAMOND_CHESTPLATE)
+            .addCraftLock(Items.DIAMOND_HELMET, Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS, Items.DIAMOND_BOOTS));
       
-      registerTech(RESONATORS, new ResearchTech(RESONATORS,3,new RegistryKey[]{SEMICONDUCTORS},RESEARCH_COST_RESONATORS_CFG,RESEARCH_RATE_RESONATORS_CFG).withShowStack(Items.COMPARATOR)
-            .addCraftLock(Items.COMPARATOR, Items.OBSERVER));
-      registerTech(ENHANCED_ALCHEMY, new ResearchTech(ENHANCED_ALCHEMY,3,new RegistryKey[]{BASIC_ALCHEMY},RESEARCH_COST_ENHANCED_ALCHEMY_CFG,RESEARCH_RATE_ENHANCED_ALCHEMY_CFG).withShowStack(Items.POTION)
+      
+      registerTech(SEMICONDUCTORS, new ResearchTech(SEMICONDUCTORS,2,new RegistryKey[]{MECHANICS},RESEARCH_COST_SEMICONDUCTORS_CFG,RESEARCH_RATE_SEMICONDUCTORS_CFG).withShowStack(Items.REPEATER)
+            .addCraftLock(Items.REPEATER, Items.DAYLIGHT_DETECTOR, Items.COMPARATOR, Items.OBSERVER));
+      registerTech(FIBERGLASS_COMPOSITE, new ResearchTech(FIBERGLASS_COMPOSITE,2,new RegistryKey[]{ARCHERY},RESEARCH_COST_FIBERGLASS_COMPOSITE_CFG,RESEARCH_RATE_FIBERGLASS_COMPOSITE_CFG).withShowStack(Items.CROSSBOW)
+            .addCraftLock(Items.CROSSBOW));
+      registerTech(ENHANCED_ALCHEMY, new ResearchTech(ENHANCED_ALCHEMY,2,new RegistryKey[]{BASIC_ALCHEMY},RESEARCH_COST_ENHANCED_ALCHEMY_CFG,RESEARCH_RATE_ENHANCED_ALCHEMY_CFG).withShowStack(Items.POTION)
             .addPotionLock(Potions.SWIFTNESS,Potions.SLOWNESS,Potions.REGENERATION,Potions.INVISIBILITY,Potions.WEAKNESS,Potions.OOZING,Potions.INFESTED,Potions.WEAVING,Potions.WIND_CHARGED));
-      registerTech(POTENT_ALCHEMY, new ResearchTech(POTENT_ALCHEMY,3,new RegistryKey[]{BASIC_ALCHEMY},RESEARCH_COST_POTENT_ALCHEMY_CFG,RESEARCH_RATE_POTENT_ALCHEMY_CFG).withShowStack(Items.GLOWSTONE_DUST));
-      registerTech(ENDURING_ALCHEMY, new ResearchTech(ENDURING_ALCHEMY,3,new RegistryKey[]{BASIC_ALCHEMY},RESEARCH_COST_ENDURING_ALCHEMY_CFG,RESEARCH_RATE_ENDURING_ALCHEMY_CFG).withShowStack(Items.REDSTONE));
-      registerTech(TEMPERED_WEAPONS, new ResearchTech(TEMPERED_WEAPONS,3,new RegistryKey[]{ANCIENT_ALLOY,CRYSTAL_COMPOSITE},RESEARCH_COST_TEMPERED_WEAPONS_CFG,RESEARCH_RATE_TEMPERED_WEAPONS_CFG).withShowStack(Items.NETHERITE_SWORD)
+      registerTech(POTENT_ALCHEMY, new ResearchTech(POTENT_ALCHEMY,2,new RegistryKey[]{BASIC_ALCHEMY},RESEARCH_COST_POTENT_ALCHEMY_CFG,RESEARCH_RATE_POTENT_ALCHEMY_CFG).withShowStack(Items.GLOWSTONE_DUST));
+      registerTech(ENDURING_ALCHEMY, new ResearchTech(ENDURING_ALCHEMY,2,new RegistryKey[]{BASIC_ALCHEMY},RESEARCH_COST_ENDURING_ALCHEMY_CFG,RESEARCH_RATE_ENDURING_ALCHEMY_CFG).withShowStack(Items.REDSTONE));
+      registerTech(TEMPERED_WEAPONS, new ResearchTech(TEMPERED_WEAPONS,2,new RegistryKey[]{ANCIENT_ALLOY,CRYSTAL_COMPOSITE},RESEARCH_COST_TEMPERED_WEAPONS_CFG,RESEARCH_RATE_TEMPERED_WEAPONS_CFG).withShowStack(Items.NETHERITE_SWORD)
             .addCraftLock(Items.NETHERITE_SWORD, Items.NETHERITE_AXE));
-      registerTech(ANNEALED_ARMOR, new ResearchTech(ANNEALED_ARMOR,3,new RegistryKey[]{ANCIENT_ALLOY,HARDENED_PLATES},RESEARCH_COST_ANNEALED_ARMOR_CFG,RESEARCH_RATE_ANNEALED_ARMOR_CFG).withShowStack(Items.NETHERITE_CHESTPLATE)
+      registerTech(ANNEALED_ARMOR, new ResearchTech(ANNEALED_ARMOR,2,new RegistryKey[]{ANCIENT_ALLOY,HARDENED_PLATES},RESEARCH_COST_ANNEALED_ARMOR_CFG,RESEARCH_RATE_ANNEALED_ARMOR_CFG).withShowStack(Items.NETHERITE_CHESTPLATE)
             .addCraftLock(Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS, Items.NETHERITE_BOOTS));
-      registerTech(ARCANA, new ResearchTech(ARCANA,3,new RegistryKey[]{},RESEARCH_COST_ARCANA_CFG,RESEARCH_RATE_ARCANA_CFG).withShowStack(ArcanaRegistry.ARCANE_TOME.getPrefItemNoLore())
+      registerTech(ARCANA, new ResearchTech(ARCANA,2,new RegistryKey[]{},RESEARCH_COST_ARCANA_CFG,RESEARCH_RATE_ARCANA_CFG).withShowStack(ArcanaRegistry.ARCANE_TOME.getPrefItemNoLore())
             .addArcanaLock(ArcanaRegistry.MAGNETISM_CHARM,ArcanaRegistry.TELESCOPING_BEACON,ArcanaRegistry.ANCIENT_DOWSING_ROD,ArcanaRegistry.AQUATIC_EVERSOURCE,ArcanaRegistry.CONTAINMENT_CIRCLET,
                   ArcanaRegistry.CHEST_TRANSLOCATOR, ArcanaRegistry.FRACTAL_SPONGE, ArcanaRegistry.TEMPORAL_MOMENT, ArcanaRegistry.WILD_GROWTH_CHARM, ArcanaRegistry.PEARL_OF_RECALL,
                   ArcanaRegistry.EVERLASTING_ROCKET, ArcanaRegistry.CLEANSING_CHARM, ArcanaRegistry.LIGHT_CHARM, ArcanaRegistry.EXOTIC_MATTER, ArcanaRegistry.RUNIC_MATRIX));
       
-      registerTech(PROLIFIC_ALCHEMY, new ResearchTech(PROLIFIC_ALCHEMY,4,new RegistryKey[]{ENHANCED_ALCHEMY},RESEARCH_COST_PROLIFIC_ALCHEMY_CFG,RESEARCH_RATE_PROLIFIC_ALCHEMY_CFG).withShowStack(Items.SPLASH_POTION));
-      registerTech(ADVANCED_ALCHEMY, new ResearchTech(ADVANCED_ALCHEMY,4,new RegistryKey[]{ENHANCED_ALCHEMY},RESEARCH_COST_ADVANCED_ALCHEMY_CFG,RESEARCH_RATE_ADVANCED_ALCHEMY_CFG).withShowStack(Items.POTION)
+      
+//      registerTech(RESONATORS, new ResearchTech(RESONATORS,3,new RegistryKey[]{SEMICONDUCTORS},RESEARCH_COST_RESONATORS_CFG,RESEARCH_RATE_RESONATORS_CFG).withShowStack(Items.COMPARATOR)
+//            .addCraftLock(Items.COMPARATOR, Items.OBSERVER));
+      
+      registerTech(PROLIFIC_ALCHEMY, new ResearchTech(PROLIFIC_ALCHEMY,3,new RegistryKey[]{ENHANCED_ALCHEMY},RESEARCH_COST_PROLIFIC_ALCHEMY_CFG,RESEARCH_RATE_PROLIFIC_ALCHEMY_CFG).withShowStack(Items.SPLASH_POTION));
+      registerTech(ADVANCED_ALCHEMY, new ResearchTech(ADVANCED_ALCHEMY,3,new RegistryKey[]{ENHANCED_ALCHEMY},RESEARCH_COST_ADVANCED_ALCHEMY_CFG,RESEARCH_RATE_ADVANCED_ALCHEMY_CFG).withShowStack(Items.POTION)
             .addPotionLock(Potions.HARMING,Potions.TURTLE_MASTER,Potions.STRENGTH,Potions.HEALING,Potions.POISON));
-      registerTech(ALTARS, new ResearchTech(ALTARS,4,new RegistryKey[]{ARCANA},RESEARCH_COST_ALTARS_CFG,RESEARCH_RATE_ALTARS_CFG).withShowStack(ArcanaRegistry.TRANSMUTATION_ALTAR.getPrefItemNoLore())
+      registerTech(ALTARS, new ResearchTech(ALTARS,3,new RegistryKey[]{ARCANA},RESEARCH_COST_ALTARS_CFG,RESEARCH_RATE_ALTARS_CFG).withShowStack(ArcanaRegistry.TRANSMUTATION_ALTAR.getPrefItemNoLore())
             .addArcanaLock(ArcanaRegistry.CELESTIAL_ALTAR, ArcanaRegistry.STARPATH_ALTAR, ArcanaRegistry.STORMCALLER_ALTAR, ArcanaRegistry.TRANSMUTATION_ALTAR));
-      registerTech(ENCHANTING, new ResearchTech(ENCHANTING,4,new RegistryKey[]{ARCANA},RESEARCH_COST_ENCHANTING_CFG,RESEARCH_RATE_ENCHANTING_CFG).withShowStack(Items.ENCHANTING_TABLE)
+      registerTech(ENCHANTING, new ResearchTech(ENCHANTING,3,new RegistryKey[]{ARCANA},RESEARCH_COST_ENCHANTING_CFG,RESEARCH_RATE_ENCHANTING_CFG).withShowStack(Items.ENCHANTING_TABLE)
             .addEnchantLock(new Pair<>(Enchantments.BANE_OF_ARTHROPODS,1),new Pair<>(Enchantments.BANE_OF_ARTHROPODS,2),new Pair<>(Enchantments.BANE_OF_ARTHROPODS,3), new Pair<>(Enchantments.LUCK_OF_THE_SEA,1),
                   new Pair<>(Enchantments.LUCK_OF_THE_SEA,2), new Pair<>(Enchantments.PROJECTILE_PROTECTION,1), new Pair<>(Enchantments.PROJECTILE_PROTECTION,2), new Pair<>(Enchantments.VANISHING_CURSE,1),
                   new Pair<>(Enchantments.BINDING_CURSE,1), new Pair<>(Enchantments.SWEEPING_EDGE,1), new Pair<>(Enchantments.FEATHER_FALLING,1), new Pair<>(Enchantments.BLAST_PROTECTION,1),
@@ -726,14 +839,16 @@ public class NationsRegistry {
                   new Pair<>(Enchantments.LOYALTY,1), new Pair<>(Enchantments.LOYALTY,2), new Pair<>(Enchantments.SHARPNESS,1), new Pair<>(Enchantments.PROTECTION,1), new Pair<>(Enchantments.WIND_BURST,1),
                   new Pair<>(ArcanaRegistry.FATE_ANCHOR,1), new Pair<>(Enchantments.EFFICIENCY,1), new Pair<>(Enchantments.EFFICIENCY,2))
             .addArcanaLock(ArcanaRegistry.SPAWNER_HARNESS));
-      registerTech(SMITHING, new ResearchTech(SMITHING,4,new RegistryKey[]{ARCANA,TEMPERED_WEAPONS,ANNEALED_ARMOR},RESEARCH_COST_SMITHING_CFG,RESEARCH_RATE_SMITHING_CFG).withShowStack(Items.ANVIL)
+      registerTech(SMITHING, new ResearchTech(SMITHING,3,new RegistryKey[]{ARCANA,TEMPERED_WEAPONS,ANNEALED_ARMOR},RESEARCH_COST_SMITHING_CFG,RESEARCH_RATE_SMITHING_CFG).withShowStack(Items.ANVIL)
             .addArcanaLock(ArcanaRegistry.MAGMATIC_EVERSOURCE, ArcanaRegistry.ARCANISTS_BELT));
-      registerTech(FLETCHING, new ResearchTech(FLETCHING,4,new RegistryKey[]{ARCANA,FIBERGLASS_COMPOSITE,ENHANCED_ALCHEMY},RESEARCH_COST_FLETCHING_CFG,RESEARCH_RATE_FLETCHING_CFG).withShowStack(Items.FLETCHING_TABLE)
+      registerTech(FLETCHING, new ResearchTech(FLETCHING,3,new RegistryKey[]{ARCANA,FIBERGLASS_COMPOSITE,ENHANCED_ALCHEMY},RESEARCH_COST_FLETCHING_CFG,RESEARCH_RATE_FLETCHING_CFG).withShowStack(Items.FLETCHING_TABLE)
             .addArcanaLock(ArcanaRegistry.ALCHEMICAL_ARBALEST, ArcanaRegistry.OVERFLOWING_QUIVER));
-      registerTech(GRAVITIC_WEAPONRY, new ResearchTech(GRAVITIC_WEAPONRY,4,new RegistryKey[]{},RESEARCH_COST_GRAVITIC_WEAPONRY_CFG,RESEARCH_RATE_GRAVITIC_WEAPONRY_CFG).withShowStack(Items.MACE)
+      registerTech(GRAVITIC_WEAPONRY, new ResearchTech(GRAVITIC_WEAPONRY,3,new RegistryKey[]{},RESEARCH_COST_GRAVITIC_WEAPONRY_CFG,RESEARCH_RATE_GRAVITIC_WEAPONRY_CFG).withShowStack(Items.MACE)
             .addCraftLock(Items.MACE));
+      registerTech(ARCHETYPE_CHANGE_ITEM, new ResearchTech(ARCHETYPE_CHANGE_ITEM,3,new RegistryKey[]{},RESEARCH_COST_ARCHETYPE_CHANGE_ITEM_CFG,RESEARCH_RATE_ARCHETYPE_CHANGE_ITEM_CFG).withShowStack(ArchetypeRegistry.CHANGE_ITEM)
+            .addCraftLock(ArchetypeRegistry.CHANGE_ITEM));
       
-      registerTech(ENHANCED_ENCHANTING, new ResearchTech(ENHANCED_ENCHANTING,5,new RegistryKey[]{ENCHANTING},RESEARCH_COST_ENHANCED_ENCHANTING_CFG,RESEARCH_RATE_ENHANCED_ENCHANTING_CFG).withShowStack(Items.ENCHANTED_BOOK)
+      registerTech(ENHANCED_ENCHANTING, new ResearchTech(ENHANCED_ENCHANTING,4,new RegistryKey[]{ENCHANTING},RESEARCH_COST_ENHANCED_ENCHANTING_CFG,RESEARCH_RATE_ENHANCED_ENCHANTING_CFG).withShowStack(Items.ENCHANTED_BOOK)
             .addEnchantLock(new Pair<>(Enchantments.BANE_OF_ARTHROPODS,4), new Pair<>(Enchantments.BANE_OF_ARTHROPODS,5), new Pair<>(Enchantments.PROJECTILE_PROTECTION,3),
                   new Pair<>(Enchantments.PROJECTILE_PROTECTION,4), new Pair<>(Enchantments.LUCK_OF_THE_SEA,3), new Pair<>(Enchantments.SWEEPING_EDGE,2),
                   new Pair<>(Enchantments.FEATHER_FALLING,2), new Pair<>(Enchantments.BLAST_PROTECTION,3), new Pair<>(Enchantments.BLAST_PROTECTION,4), new Pair<>(Enchantments.SHARPNESS,2),
@@ -747,19 +862,17 @@ public class NationsRegistry {
                   new Pair<>(Enchantments.SOUL_SPEED,1), new Pair<>(Enchantments.POWER,3), new Pair<>(Enchantments.POWER,4), new Pair<>(Enchantments.FIRE_ASPECT,1),
                   new Pair<>(Enchantments.AQUA_AFFINITY,1), new Pair<>(Enchantments.BREACH,2), new Pair<>(Enchantments.BREACH,3), new Pair<>(Enchantments.DENSITY,2), new Pair<>(Enchantments.DENSITY,3),
                   new Pair<>(Enchantments.EFFICIENCY,3), new Pair<>(Enchantments.EFFICIENCY,4), new Pair<>(Enchantments.MULTISHOT,1)));
-      registerTech(FORGING, new ResearchTech(FORGING,5,new RegistryKey[]{SMITHING},RESEARCH_COST_FORGING_CFG,RESEARCH_RATE_FORGING_CFG).withShowStack(Items.BLAST_FURNACE)
+      registerTech(FORGING, new ResearchTech(FORGING,4,new RegistryKey[]{SMITHING},RESEARCH_COST_FORGING_CFG,RESEARCH_RATE_FORGING_CFG).withShowStack(Items.BLAST_FURNACE)
             .addArcanaLock(ArcanaRegistry.SOULSTONE, ArcanaRegistry.IGNEOUS_COLLIDER, ArcanaRegistry.BINARY_BLADES, ArcanaRegistry.GRAVITON_MAUL, ArcanaRegistry.SHADOW_STALKERS_GLAIVE, ArcanaRegistry.SHIELD_OF_FORTITUDE,
                   ArcanaRegistry.SOJOURNER_BOOTS, ArcanaRegistry.TOTEM_OF_VENGEANCE));
-      registerTech(RUNIC_ARCHERY, new ResearchTech(RUNIC_ARCHERY,5,new RegistryKey[]{FLETCHING},RESEARCH_COST_RUNIC_ARCHERY_CFG,RESEARCH_RATE_RUNIC_ARCHERY_CFG).withShowStack(ArcanaRegistry.RUNIC_BOW.getPrefItemNoLore())
+      registerTech(RUNIC_ARCHERY, new ResearchTech(RUNIC_ARCHERY,4,new RegistryKey[]{FLETCHING},RESEARCH_COST_RUNIC_ARCHERY_CFG,RESEARCH_RATE_RUNIC_ARCHERY_CFG).withShowStack(ArcanaRegistry.RUNIC_BOW.getPrefItemNoLore())
             .addArcanaLock(ArcanaRegistry.RUNIC_BOW, ArcanaRegistry.RUNIC_QUIVER, ArcanaRegistry.ARCANE_FLAK_ARROWS, ArcanaRegistry.BLINK_ARROWS, ArcanaRegistry.CONCUSSION_ARROWS, ArcanaRegistry.DETONATION_ARROWS,
                   ArcanaRegistry.ENSNAREMENT_ARROWS, ArcanaRegistry.EXPULSION_ARROWS, ArcanaRegistry.GRAVITON_ARROWS, ArcanaRegistry.PHOTONIC_ARROWS, ArcanaRegistry.SIPHONING_ARROWS, ArcanaRegistry.SMOKE_ARROWS,
                   ArcanaRegistry.STORM_ARROWS, ArcanaRegistry.TETHER_ARROWS, ArcanaRegistry.TRACKING_ARROWS));
-      registerTech(BASIC_AUGMENTATION, new ResearchTech(BASIC_AUGMENTATION,5,new RegistryKey[]{SMITHING},RESEARCH_COST_BASIC_AUGMENTATION_CFG,RESEARCH_RATE_BASIC_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.CATALYTIC_MATRIX.getPrefItemNoLore())
-            .addArcanaLock(ArcanaRegistry.CATALYTIC_MATRIX, ArcanaRegistry.MUNDANE_CATALYST));
-      registerTech(ARCHETYPE_CHANGE_ITEM, new ResearchTech(ARCHETYPE_CHANGE_ITEM,5,new RegistryKey[]{},RESEARCH_COST_ARCHETYPE_CHANGE_ITEM_CFG,RESEARCH_RATE_ARCHETYPE_CHANGE_ITEM_CFG).withShowStack(ArchetypeRegistry.CHANGE_ITEM)
-            .addCraftLock(ArchetypeRegistry.CHANGE_ITEM));
+      registerTech(BASIC_AUGMENTATION, new ResearchTech(BASIC_AUGMENTATION,4,new RegistryKey[]{SMITHING},RESEARCH_COST_BASIC_AUGMENTATION_CFG,RESEARCH_RATE_BASIC_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.CATALYTIC_MATRIX.getPrefItemNoLore())
+            .addArcanaLock(ArcanaRegistry.CATALYTIC_MATRIX, ArcanaRegistry.MUNDANE_CATALYST, ArcanaRegistry.EMPOWERED_CATALYST, ArcanaRegistry.EXOTIC_CATALYST));
       
-      registerTech(ADVANCED_ARCANA, new ResearchTech(ADVANCED_ARCANA,6,new RegistryKey[]{ENHANCED_ENCHANTING,FORGING},RESEARCH_COST_ADVANCED_ARCANA_CFG,RESEARCH_RATE_ADVANCED_ARCANA_CFG).withShowStack(Items.LECTERN)
+      registerTech(ADVANCED_ARCANA, new ResearchTech(ADVANCED_ARCANA,5,new RegistryKey[]{ENHANCED_ENCHANTING,FORGING},RESEARCH_COST_ADVANCED_ARCANA_CFG,RESEARCH_RATE_ADVANCED_ARCANA_CFG).withShowStack(Items.LECTERN)
             .addEnchantLock(new Pair<>(Enchantments.FEATHER_FALLING,3), new Pair<>(Enchantments.FEATHER_FALLING,4), new Pair<>(Enchantments.DEPTH_STRIDER,2), new Pair<>(Enchantments.DEPTH_STRIDER,3),
                   new Pair<>(Enchantments.SWEEPING_EDGE,3), new Pair<>(Enchantments.SWIFT_SNEAK,2), new Pair<>(Enchantments.SWIFT_SNEAK,3), new Pair<>(Enchantments.SOUL_SPEED,2),
                   new Pair<>(Enchantments.SOUL_SPEED,3), new Pair<>(Enchantments.QUICK_CHARGE,3), new Pair<>(Enchantments.SHARPNESS,4), new Pair<>(Enchantments.SHARPNESS,5),
@@ -768,11 +881,12 @@ public class NationsRegistry {
                   new Pair<>(Enchantments.POWER,5), new Pair<>(Enchantments.THORNS,3), new Pair<>(Enchantments.LOOTING,3), new Pair<>(Enchantments.FORTUNE,3), new Pair<>(Enchantments.IMPALING,5),
                   new Pair<>(Enchantments.PIERCING,4), new Pair<>(Enchantments.EFFICIENCY,5), new Pair<>(Enchantments.PROTECTION,4), new Pair<>(Enchantments.BREACH,4), new Pair<>(Enchantments.WIND_BURST,3))
             .addArcanaLock(ArcanaRegistry.NUL_MEMENTO,ArcanaRegistry.SPAWNER_INFUSER,ArcanaRegistry.AEQUALIS_SCIENTIA));
-      registerTech(ENHANCED_AUGMENTATION, new ResearchTech(ENHANCED_AUGMENTATION,6,new RegistryKey[]{BASIC_AUGMENTATION},RESEARCH_COST_ENHANCED_AUGMENTATION_CFG,RESEARCH_RATE_ENHANCED_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.EMPOWERED_CATALYST.getPrefItemNoLore())
-            .addArcanaLock(ArcanaRegistry.EMPOWERED_CATALYST, ArcanaRegistry.EXOTIC_CATALYST));
-      
-      registerTech(ADVANCED_AUGMENTATION, new ResearchTech(ADVANCED_AUGMENTATION,7,new RegistryKey[]{ENHANCED_AUGMENTATION},RESEARCH_COST_ADVANCED_AUGMENTATION_CFG,RESEARCH_RATE_ADVANCED_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.SOVEREIGN_CATALYST.getPrefItemNoLore())
+//      registerTech(ENHANCED_AUGMENTATION, new ResearchTech(ENHANCED_AUGMENTATION,6,new RegistryKey[]{BASIC_AUGMENTATION},RESEARCH_COST_ENHANCED_AUGMENTATION_CFG,RESEARCH_RATE_ENHANCED_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.EMPOWERED_CATALYST.getPrefItemNoLore())
+//            .addArcanaLock(ArcanaRegistry.EMPOWERED_CATALYST, ArcanaRegistry.EXOTIC_CATALYST));
+      registerTech(ADVANCED_AUGMENTATION, new ResearchTech(ADVANCED_AUGMENTATION,5,new RegistryKey[]{ENHANCED_AUGMENTATION},RESEARCH_COST_ADVANCED_AUGMENTATION_CFG,RESEARCH_RATE_ADVANCED_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.SOVEREIGN_CATALYST.getPrefItemNoLore())
             .addArcanaLock(ArcanaRegistry.SOVEREIGN_CATALYST, ArcanaRegistry.DIVINE_CATALYST));
+      
+      setupNationBuffTechs();
    }
    
    static {
@@ -844,6 +958,93 @@ public class NationsRegistry {
       return item;
    }
    
+   private static void setupNationBuffTechs(){
+      registerTech(MANIFEST_DESTINY_1, new ResearchTech(MANIFEST_DESTINY_1,1,new RegistryKey[]{},RESEARCH_COST_TIER_1_BUFF_CFG,RESEARCH_RATE_TIER_1_BUFF_CFG).withShowStack(Items.DIRT_PATH)
+            .setBuff(MANIFEST_DESTINY));
+      registerTech(AGRICULTURE_1, new ResearchTech(AGRICULTURE_1,1,new RegistryKey[]{},RESEARCH_COST_TIER_1_BUFF_CFG,RESEARCH_RATE_TIER_1_BUFF_CFG).withShowStack(Items.WHEAT)
+            .setBuff(AGRICULTURE));
+      registerTech(INFRASTRUCTURE_1, new ResearchTech(INFRASTRUCTURE_1,1,new RegistryKey[]{},RESEARCH_COST_TIER_1_BUFF_CFG,RESEARCH_RATE_TIER_1_BUFF_CFG).withShowStack(Items.BRICKS)
+            .setBuff(INFRASTRUCTURE));
+      registerTech(PUBLIC_EDUCATION_1, new ResearchTech(PUBLIC_EDUCATION_1,1,new RegistryKey[]{},RESEARCH_COST_TIER_1_BUFF_CFG,RESEARCH_RATE_TIER_1_BUFF_CFG).withShowStack(Items.BOOKSHELF)
+            .setBuff(PUBLIC_EDUCATION));
+      registerTech(IMPERIALISM_1, new ResearchTech(IMPERIALISM_1,1,new RegistryKey[]{},RESEARCH_COST_TIER_1_BUFF_CFG,RESEARCH_RATE_TIER_1_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.MONUMENT))
+            .setBuff(IMPERIALISM));
+      registerTech(COLONIALISM_1, new ResearchTech(COLONIALISM_1,1,new RegistryKey[]{},RESEARCH_COST_TIER_1_BUFF_CFG,RESEARCH_RATE_TIER_1_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.GROWTH_CAPTURE_POINT))
+            .setBuff(COLONIALISM));
+      registerTech(SCHOLARSHIP_1, new ResearchTech(SCHOLARSHIP_1,1,new RegistryKey[]{},RESEARCH_COST_TIER_1_BUFF_CFG,RESEARCH_RATE_TIER_1_BUFF_CFG).withShowStack(Items.EXPERIENCE_BOTTLE)
+            .setBuff(SCHOLARSHIP));
+      registerTech(BARTERING_1, new ResearchTech(BARTERING_1,1,new RegistryKey[]{},RESEARCH_COST_TIER_1_BUFF_CFG,RESEARCH_RATE_TIER_1_BUFF_CFG).withShowStack(MATERIAL_COIN_ITEM)
+            .setBuff(BARTERING));
+      
+      registerTech(MANIFEST_DESTINY_2, new ResearchTech(MANIFEST_DESTINY_2,2,new RegistryKey[]{MANIFEST_DESTINY_1},RESEARCH_COST_TIER_2_BUFF_CFG,RESEARCH_RATE_TIER_2_BUFF_CFG).withShowStack(Items.DIRT_PATH)
+            .setBuff(MANIFEST_DESTINY));
+      registerTech(AGRICULTURE_2, new ResearchTech(AGRICULTURE_2,2,new RegistryKey[]{AGRICULTURE_1},RESEARCH_COST_TIER_2_BUFF_CFG,RESEARCH_RATE_TIER_2_BUFF_CFG).withShowStack(Items.WHEAT)
+            .setBuff(AGRICULTURE));
+      registerTech(INFRASTRUCTURE_2, new ResearchTech(INFRASTRUCTURE_2,2,new RegistryKey[]{INFRASTRUCTURE_1},RESEARCH_COST_TIER_2_BUFF_CFG,RESEARCH_RATE_TIER_2_BUFF_CFG).withShowStack(Items.BRICKS)
+            .setBuff(INFRASTRUCTURE));
+      registerTech(PUBLIC_EDUCATION_2, new ResearchTech(PUBLIC_EDUCATION_2,2,new RegistryKey[]{PUBLIC_EDUCATION_1},RESEARCH_COST_TIER_2_BUFF_CFG,RESEARCH_RATE_TIER_2_BUFF_CFG).withShowStack(Items.BOOKSHELF)
+            .setBuff(PUBLIC_EDUCATION));
+      registerTech(IMPERIALISM_2, new ResearchTech(IMPERIALISM_2,2,new RegistryKey[]{IMPERIALISM_1},RESEARCH_COST_TIER_2_BUFF_CFG,RESEARCH_RATE_TIER_2_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.MONUMENT))
+            .setBuff(IMPERIALISM));
+      registerTech(COLONIALISM_2, new ResearchTech(COLONIALISM_2,2,new RegistryKey[]{COLONIALISM_1},RESEARCH_COST_TIER_2_BUFF_CFG,RESEARCH_RATE_TIER_2_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.GROWTH_CAPTURE_POINT))
+            .setBuff(COLONIALISM));
+      registerTech(SCHOLARSHIP_2, new ResearchTech(SCHOLARSHIP_2,2,new RegistryKey[]{SCHOLARSHIP_1},RESEARCH_COST_TIER_2_BUFF_CFG,RESEARCH_RATE_TIER_2_BUFF_CFG).withShowStack(Items.EXPERIENCE_BOTTLE)
+            .setBuff(SCHOLARSHIP));
+      registerTech(BARTERING_2, new ResearchTech(BARTERING_2,2,new RegistryKey[]{BARTERING_1},RESEARCH_COST_TIER_2_BUFF_CFG,RESEARCH_RATE_TIER_2_BUFF_CFG).withShowStack(MATERIAL_COIN_ITEM)
+            .setBuff(BARTERING));
+      
+      registerTech(MANIFEST_DESTINY_3, new ResearchTech(MANIFEST_DESTINY_3,3,new RegistryKey[]{MANIFEST_DESTINY_2},RESEARCH_COST_TIER_3_BUFF_CFG,RESEARCH_RATE_TIER_3_BUFF_CFG).withShowStack(Items.DIRT_PATH)
+            .setBuff(MANIFEST_DESTINY));
+      registerTech(AGRICULTURE_3, new ResearchTech(AGRICULTURE_3,3,new RegistryKey[]{AGRICULTURE_2},RESEARCH_COST_TIER_3_BUFF_CFG,RESEARCH_RATE_TIER_3_BUFF_CFG).withShowStack(Items.WHEAT)
+            .setBuff(AGRICULTURE));
+      registerTech(INFRASTRUCTURE_3, new ResearchTech(INFRASTRUCTURE_3,3,new RegistryKey[]{INFRASTRUCTURE_2},RESEARCH_COST_TIER_3_BUFF_CFG,RESEARCH_RATE_TIER_3_BUFF_CFG).withShowStack(Items.BRICKS)
+            .setBuff(INFRASTRUCTURE));
+      registerTech(PUBLIC_EDUCATION_3, new ResearchTech(PUBLIC_EDUCATION_3,3,new RegistryKey[]{PUBLIC_EDUCATION_2},RESEARCH_COST_TIER_3_BUFF_CFG,RESEARCH_RATE_TIER_3_BUFF_CFG).withShowStack(Items.BOOKSHELF)
+            .setBuff(PUBLIC_EDUCATION));
+      registerTech(IMPERIALISM_3, new ResearchTech(IMPERIALISM_3,3,new RegistryKey[]{IMPERIALISM_2},RESEARCH_COST_TIER_3_BUFF_CFG,RESEARCH_RATE_TIER_3_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.MONUMENT))
+            .setBuff(IMPERIALISM));
+      registerTech(COLONIALISM_3, new ResearchTech(COLONIALISM_3,3,new RegistryKey[]{COLONIALISM_2},RESEARCH_COST_TIER_3_BUFF_CFG,RESEARCH_RATE_TIER_3_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.GROWTH_CAPTURE_POINT))
+            .setBuff(COLONIALISM));
+      registerTech(SCHOLARSHIP_3, new ResearchTech(SCHOLARSHIP_3,3,new RegistryKey[]{SCHOLARSHIP_2},RESEARCH_COST_TIER_3_BUFF_CFG,RESEARCH_RATE_TIER_3_BUFF_CFG).withShowStack(Items.EXPERIENCE_BOTTLE)
+            .setBuff(SCHOLARSHIP));
+      registerTech(BARTERING_3, new ResearchTech(BARTERING_3,3,new RegistryKey[]{BARTERING_2},RESEARCH_COST_TIER_3_BUFF_CFG,RESEARCH_RATE_TIER_3_BUFF_CFG).withShowStack(MATERIAL_COIN_ITEM)
+            .setBuff(BARTERING));
+      
+      registerTech(MANIFEST_DESTINY_4, new ResearchTech(MANIFEST_DESTINY_4,4,new RegistryKey[]{MANIFEST_DESTINY_3},RESEARCH_COST_TIER_4_BUFF_CFG,RESEARCH_RATE_TIER_4_BUFF_CFG).withShowStack(Items.DIRT_PATH)
+            .setBuff(MANIFEST_DESTINY));
+      registerTech(AGRICULTURE_4, new ResearchTech(AGRICULTURE_4,4,new RegistryKey[]{AGRICULTURE_3},RESEARCH_COST_TIER_4_BUFF_CFG,RESEARCH_RATE_TIER_4_BUFF_CFG).withShowStack(Items.WHEAT)
+            .setBuff(AGRICULTURE));
+      registerTech(INFRASTRUCTURE_4, new ResearchTech(INFRASTRUCTURE_4,4,new RegistryKey[]{INFRASTRUCTURE_3},RESEARCH_COST_TIER_4_BUFF_CFG,RESEARCH_RATE_TIER_4_BUFF_CFG).withShowStack(Items.BRICKS)
+            .setBuff(INFRASTRUCTURE));
+      registerTech(PUBLIC_EDUCATION_4, new ResearchTech(PUBLIC_EDUCATION_4,4,new RegistryKey[]{PUBLIC_EDUCATION_3},RESEARCH_COST_TIER_4_BUFF_CFG,RESEARCH_RATE_TIER_4_BUFF_CFG).withShowStack(Items.BOOKSHELF)
+            .setBuff(PUBLIC_EDUCATION));
+      registerTech(IMPERIALISM_4, new ResearchTech(IMPERIALISM_4,4,new RegistryKey[]{IMPERIALISM_3},RESEARCH_COST_TIER_4_BUFF_CFG,RESEARCH_RATE_TIER_4_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.MONUMENT))
+            .setBuff(IMPERIALISM));
+      registerTech(COLONIALISM_4, new ResearchTech(COLONIALISM_4,4,new RegistryKey[]{COLONIALISM_3},RESEARCH_COST_TIER_4_BUFF_CFG,RESEARCH_RATE_TIER_4_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.GROWTH_CAPTURE_POINT))
+            .setBuff(COLONIALISM));
+      registerTech(SCHOLARSHIP_4, new ResearchTech(SCHOLARSHIP_4,4,new RegistryKey[]{SCHOLARSHIP_3},RESEARCH_COST_TIER_4_BUFF_CFG,RESEARCH_RATE_TIER_4_BUFF_CFG).withShowStack(Items.EXPERIENCE_BOTTLE)
+            .setBuff(SCHOLARSHIP));
+      registerTech(BARTERING_4, new ResearchTech(BARTERING_4,4,new RegistryKey[]{BARTERING_3},RESEARCH_COST_TIER_4_BUFF_CFG,RESEARCH_RATE_TIER_4_BUFF_CFG).withShowStack(MATERIAL_COIN_ITEM)
+            .setBuff(BARTERING));
+      
+      registerTech(MANIFEST_DESTINY_5, new ResearchTech(MANIFEST_DESTINY_5,5,new RegistryKey[]{MANIFEST_DESTINY_4},RESEARCH_COST_TIER_5_BUFF_CFG,RESEARCH_RATE_TIER_5_BUFF_CFG).withShowStack(Items.DIRT_PATH)
+            .setBuff(MANIFEST_DESTINY));
+      registerTech(AGRICULTURE_5, new ResearchTech(AGRICULTURE_5,5,new RegistryKey[]{AGRICULTURE_4},RESEARCH_COST_TIER_5_BUFF_CFG,RESEARCH_RATE_TIER_5_BUFF_CFG).withShowStack(Items.WHEAT)
+            .setBuff(AGRICULTURE));
+      registerTech(INFRASTRUCTURE_5, new ResearchTech(INFRASTRUCTURE_5,5,new RegistryKey[]{INFRASTRUCTURE_4},RESEARCH_COST_TIER_5_BUFF_CFG,RESEARCH_RATE_TIER_5_BUFF_CFG).withShowStack(Items.BRICKS)
+            .setBuff(INFRASTRUCTURE));
+      registerTech(PUBLIC_EDUCATION_5, new ResearchTech(PUBLIC_EDUCATION_5,5,new RegistryKey[]{PUBLIC_EDUCATION_4},RESEARCH_COST_TIER_5_BUFF_CFG,RESEARCH_RATE_TIER_5_BUFF_CFG).withShowStack(Items.BOOKSHELF)
+            .setBuff(PUBLIC_EDUCATION));
+      registerTech(IMPERIALISM_5, new ResearchTech(IMPERIALISM_5,5,new RegistryKey[]{IMPERIALISM_4},RESEARCH_COST_TIER_5_BUFF_CFG,RESEARCH_RATE_TIER_5_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.MONUMENT))
+            .setBuff(IMPERIALISM));
+      registerTech(COLONIALISM_5, new ResearchTech(COLONIALISM_5,5,new RegistryKey[]{COLONIALISM_4},RESEARCH_COST_TIER_5_BUFF_CFG,RESEARCH_RATE_TIER_5_BUFF_CFG).withShowStack(GraphicalItem.with(GraphicalItem.GraphicItems.GROWTH_CAPTURE_POINT))
+            .setBuff(COLONIALISM));
+      registerTech(SCHOLARSHIP_5, new ResearchTech(SCHOLARSHIP_5,5,new RegistryKey[]{SCHOLARSHIP_4},RESEARCH_COST_TIER_5_BUFF_CFG,RESEARCH_RATE_TIER_5_BUFF_CFG).withShowStack(Items.EXPERIENCE_BOTTLE)
+            .setBuff(SCHOLARSHIP));
+      registerTech(BARTERING_5, new ResearchTech(BARTERING_5,5,new RegistryKey[]{BARTERING_4},RESEARCH_COST_TIER_5_BUFF_CFG,RESEARCH_RATE_TIER_5_BUFF_CFG).withShowStack(MATERIAL_COIN_ITEM)
+            .setBuff(BARTERING));
+   }
+   
    private static ResearchTech registerTech(RegistryKey<ResearchTech> key, ResearchTech tech){
       Registry.register(RESEARCH,key,tech);
       for(Item item : tech.getCraftLocked()){
@@ -852,7 +1053,7 @@ public class NationsRegistry {
       for(RegistryEntry<Potion> entry : tech.getPotionLocked()){
          LOCKED_POTIONS.put(entry.value(),key);
          
-         Supplier<Integer> costGetter = () -> (tech.getTier()-1) * NationsConfig.getInt(RESEARCH_COST_POTIONS_PER_TIER_CFG);
+         Supplier<Integer> costGetter = () -> tech.getTier() * NationsConfig.getInt(RESEARCH_COST_POTIONS_PER_TIER_CFG);
          Supplier<Integer> rateGetter = () -> NationsConfig.getInt(RESEARCH_RATE_POTIONS_CFG);
          RegistryKey<ResearchTech> subKey = of(entry.getKey().get().getValue().getPath());
          registerTech(subKey,new ResearchTech(subKey,-1,new RegistryKey[]{key},costGetter,rateGetter));

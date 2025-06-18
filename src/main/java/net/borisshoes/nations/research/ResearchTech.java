@@ -28,6 +28,17 @@ import java.util.*;
 import java.util.function.Supplier;
 
 public class ResearchTech {
+   
+   public static final Comparator<ResearchTech> COMPARATOR =
+         Comparator.comparingInt((ResearchTech r) -> {
+            if (r.isMainTree() && !r.isBuff()) return 0;
+            if (r.isBuff())                    return 1;
+            if (r.isArcanaItem())              return 2;
+            if (r.isPotion())                  return 3;
+            if (r.isEnchant())                 return 4;
+            return 5;
+         }).thenComparing(ResearchTech::getTier).thenComparing(r -> r.getName().getString(), String.CASE_INSENSITIVE_ORDER);
+   
    private final RegistryKey<ResearchTech> key;
    private final int tier;
    private final RegistryKey<ResearchTech>[] prereqs;
@@ -37,6 +48,7 @@ public class ResearchTech {
    private final ArrayList<ArcanaItem> arcanaLock = new ArrayList<>();
    private final ArrayList<Pair<RegistryKey<Enchantment>, Integer>> enchantLocked = new ArrayList<>();
    private final ArrayList<RegistryEntry<Potion>> potionLocked = new ArrayList<>();
+   private RegistryKey<ResearchTech> buff = null;
    private ItemStack showStack;
    
    public ResearchTech(RegistryKey<ResearchTech> key, int tier, RegistryKey<ResearchTech>[] prereqs, Supplier<Integer> costGetter, Supplier<Integer> rateGetter){
@@ -72,6 +84,11 @@ public class ResearchTech {
    
    public ResearchTech addPotionLock(RegistryEntry<Potion>... potions){
       potionLocked.addAll(Arrays.asList(potions));
+      return this;
+   }
+   
+   public ResearchTech setBuff(RegistryKey<ResearchTech> buff){
+      this.buff = buff;
       return this;
    }
    
@@ -184,6 +201,14 @@ public class ResearchTech {
    
    public boolean isPotion(){
       return NationsRegistry.POTION_TECHS.containsValue(key);
+   }
+   
+   public boolean isBuff(){
+      return buff != null;
+   }
+   
+   public RegistryKey<ResearchTech> getBuff(){
+      return buff;
    }
    
    public String getId(){

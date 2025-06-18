@@ -250,7 +250,7 @@ public class CapturePointGui extends SimpleGui implements InventoryChangedListen
       
       Pair<ChunkPos,Double> infData = capturePoint.calculateNearestInfluence(playerNation);
       double minInf = NationsConfig.getDouble(NationsRegistry.CAPTURE_POINT_AUCTION_MOD_MIN_CFG);
-      if(infData.getRight() < minInf && aucStart == 0){
+      if(infData.getRight() < minInf){
          GuiElementBuilder error = GuiElementBuilder.from(GraphicalItem.with(GraphicalItem.GraphicItems.CANCEL)).hideDefaultTooltip();
          error.setName(Text.translatable("gui.nations.cap_too_far").formatted(Formatting.RED,Formatting.BOLD));
          setSlot(4,error);

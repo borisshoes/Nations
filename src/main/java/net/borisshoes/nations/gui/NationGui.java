@@ -5,6 +5,7 @@ import eu.pb4.sgui.api.ClickType;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
 import net.borisshoes.nations.Nations;
+import net.borisshoes.nations.NationsConfig;
 import net.borisshoes.nations.NationsRegistry;
 import net.borisshoes.nations.cca.INationsProfileComponent;
 import net.borisshoes.nations.gameplay.CapturePoint;
@@ -273,9 +274,12 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
       GuiHelper.outlineGUI(9,5,this, color,Text.empty(),null);
       List<ResearchTech> techs = nation.availableTechs();
       this.itemList = techs;
+      double increase = NationsConfig.getDouble(NationsRegistry.SCHOLARSHIP_INCREASE_CFG);
+      int scholarshipLvl = nation.getBuffLevel(NationsRegistry.SCHOLARSHIP);
       
       Function<ResearchTech, GuiElementBuilder> builder = tech -> {
          GuiElementBuilder elem = GuiElementBuilder.from(tech.getShowItem()).hideDefaultTooltip();
+         int rate = (int)(tech.getConsumptionRate()*(1+increase*scholarshipLvl));
          elem.setName(tech.getName().formatted(Formatting.BOLD,Formatting.AQUA));
          elem.addLoreLine(Text.empty()
                .append(Text.translatable("text.nations.cost").formatted(Formatting.BLUE))
@@ -283,7 +287,7 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
                .append(Text.translatable("text.nations.coins").formatted(Formatting.DARK_AQUA))
                .append(Text.literal("  |  ").formatted(Formatting.BLUE))
                .append(Text.translatable("text.nations.rate").formatted(Formatting.BLUE))
-               .append(Text.literal(String.format("%,d",tech.getConsumptionRate())+" ").formatted(Formatting.AQUA))
+               .append(Text.literal(String.format("%,d",rate)+" ").formatted(Formatting.AQUA))
                .append(Text.translatable("text.nations.coins_per_day").formatted(Formatting.DARK_AQUA))
          );
          int prog = nation.getProgress(tech);
@@ -347,6 +351,7 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
          
          if(i < techQueue.size()){
             ResearchTech tech = techQueue.get(i);
+            int rate = (int)(tech.getConsumptionRate()*(1+increase*scholarshipLvl));
             GuiElementBuilder elem = GuiElementBuilder.from(tech.getShowItem()).hideDefaultTooltip();
             elem.setName(tech.getName().formatted(Formatting.BOLD,Formatting.AQUA));
             elem.addLoreLine(Text.empty()
@@ -355,7 +360,7 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
                   .append(Text.translatable("text.nations.coins").formatted(Formatting.DARK_AQUA))
                   .append(Text.literal("  |  ").formatted(Formatting.BLUE))
                   .append(Text.translatable("text.nations.rate").formatted(Formatting.BLUE))
-                  .append(Text.literal(String.format("%,d",tech.getConsumptionRate())+" ").formatted(Formatting.AQUA))
+                  .append(Text.literal(String.format("%,d",rate)+" ").formatted(Formatting.AQUA))
                   .append(Text.translatable("text.nations.coins_per_day").formatted(Formatting.DARK_AQUA))
             );
             int prog = nation.getProgress(tech);
@@ -370,8 +375,8 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
                );
             }
             int completion = cost - prog;
-            int hourRate = tech.getConsumptionRate() / 24;
-            int remRate = tech.getConsumptionRate() % 24;
+            int hourRate = rate / 24;
+            int remRate = rate % 24;
             ZonedDateTime now = ZonedDateTime.now(ZoneId.systemDefault());
             ZonedDateTime startOfNextHour = now.truncatedTo(ChronoUnit.HOURS).plusHours(1);
             int tickCount = 0;
@@ -514,6 +519,7 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
       public static final ResearchFilter ARCANA = new ResearchFilter("text.nations.arcana_item", Formatting.LIGHT_PURPLE, ResearchTech::isArcanaItem);
       public static final ResearchFilter ENCHANT = new ResearchFilter("text.nations.enchant", Formatting.DARK_AQUA, ResearchTech::isEnchant);
       public static final ResearchFilter POTION = new ResearchFilter("text.nations.potion", Formatting.GOLD, ResearchTech::isPotion);
+      public static final ResearchFilter BUFF = new ResearchFilter("text.nations.buff", Formatting.GREEN, ResearchTech::isBuff);
       public static final ResearchFilter STARTED = new ResearchFilter("text.nations.started", Formatting.AQUA, tech -> getNation().hasStartedTech(tech));
       
       private ResearchFilter(String key, Formatting color, Predicate<ResearchTech> predicate){
@@ -612,7 +618,9 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
    
    private static class ResearchSort extends GuiSort<ResearchTech>{
       public static final List<ResearchSort> SORTS = new ArrayList<>();
-      public static final ResearchSort TIER = new ResearchSort("text.nations.tier", Formatting.LIGHT_PURPLE,
+      public static final ResearchSort RECOMMENDED = new ResearchSort("text.nations.recommended", Formatting.LIGHT_PURPLE,
+            ResearchTech.COMPARATOR);
+      public static final ResearchSort TIER = new ResearchSort("text.nations.tier", Formatting.GOLD,
             Comparator.comparingInt(ResearchTech::getTier));
       public static final ResearchSort COST = new ResearchSort("text.nations.cost_raw", Formatting.AQUA,
             Comparator.comparingInt(ResearchTech::getCost));

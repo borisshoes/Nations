@@ -48,18 +48,19 @@ public class BugVoucherItem extends Item implements PolymerItem {
    public static void fillLoot(MinecraftServer server){
       loot.put(new ItemStack(ArchetypeRegistry.CHANGE_ITEM,1),250);
       loot.put(new ItemStack(ArchetypeRegistry.CHANGE_ITEM,2),100);
-      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,1),200);
-      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,3),125);
-      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,5),75);
-      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,1),150);
-      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,3),50);
-      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,5),25);
+      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,1),250);
+      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,3),150);
+      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,5),100);
+      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,1),250);
+      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,3),150);
+      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,5),100);
       loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,1),500);
       loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,3),350);
       loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,5),250);
-      loot.put(VictoryPointItem.getWithValue(50),500);
-      loot.put(VictoryPointItem.getWithValue(150),250);
-      loot.put(VictoryPointItem.getWithValue(250),100);
+      loot.put(VictoryPointItem.getWithValue(250),500);
+      loot.put(VictoryPointItem.getWithValue(500),250);
+      loot.put(VictoryPointItem.getWithValue(750),100);
+      loot.put(VictoryPointItem.getWithValue(1500),25);
       loot.put(ArcanaRegistry.MUNDANE_CATALYST.getPrefItem(),100);
       loot.put(ArcanaRegistry.EMPOWERED_CATALYST.getPrefItem(),50);
       loot.put(ArcanaRegistry.EXOTIC_CATALYST.getPrefItem(),25);
@@ -131,7 +132,6 @@ public class BugVoucherItem extends Item implements PolymerItem {
             log(3,"Error Parsing "+rareMobId+" Mob Spawner for Voucher Loot");
          }
       }
-      
    }
    
    public BugVoucherItem(Settings settings, String id){

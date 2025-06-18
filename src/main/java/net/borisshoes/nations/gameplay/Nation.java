@@ -167,7 +167,9 @@ public class Nation {
          if(doResearch){
             ResearchTech activeTech = getActiveTech();
             if(activeTech != null){
-               int rate = activeTech.getConsumptionRate() / 24;
+               double increase = NationsConfig.getDouble(NationsRegistry.SCHOLARSHIP_INCREASE_CFG);
+               int scholarshipLvl = getBuffLevel(NationsRegistry.SCHOLARSHIP);
+               int rate = (int)(activeTech.getConsumptionRate()*(1+increase*scholarshipLvl)) / 24;
                int progress = getProgress(activeTech);
                int cost = activeTech.getCost();
                int remaining = cost - progress;
@@ -214,7 +216,9 @@ public class Nation {
          if(doResearch){
             ResearchTech activeTech = getActiveTech();
             if(activeTech != null){
-               int rate = activeTech.getConsumptionRate() % 24;
+               double increase = NationsConfig.getDouble(NationsRegistry.SCHOLARSHIP_INCREASE_CFG);
+               int scholarshipLvl = getBuffLevel(NationsRegistry.SCHOLARSHIP);
+               int rate = (int)(activeTech.getConsumptionRate()*(1+increase*scholarshipLvl)) % 24;
                int progress = getProgress(activeTech);
                int cost = activeTech.getCost();
                int remaining = cost - progress;
@@ -263,7 +267,18 @@ public class Nation {
       }
       
       for(ResourceType value : ResourceType.values()){
-         returned.put(value, coins.get(value).intValue());
+         double coin = coins.get(value);
+         if(value == ResourceType.GROWTH){
+            double increase = NationsConfig.getDouble(NationsRegistry.AGRICULTURE_INCREASE_CFG);
+            coin *= 1 + increase*getBuffLevel(NationsRegistry.AGRICULTURE);
+         }else if(value == ResourceType.MATERIAL){
+            double increase = NationsConfig.getDouble(NationsRegistry.INFRASTRUCTURE_INCREASE_CFG);
+            coin *= 1 + increase*getBuffLevel(NationsRegistry.INFRASTRUCTURE);
+         }else if(value == ResourceType.RESEARCH){
+            double increase = NationsConfig.getDouble(NationsRegistry.PUBLIC_EDUCATION_INCREASE_CFG);
+            coin *= 1 + increase*getBuffLevel(NationsRegistry.PUBLIC_EDUCATION);
+         }
+         returned.put(value, (int)coin);
       }
       return returned;
    }
@@ -991,20 +1006,28 @@ public class Nation {
       }
       
       boolean claim = chunk.isInfluenced();
-      int surrounded = 0;
-      for(int i = -1; i <= 1; i++){
-         for(int j = -1; j <= 1; j++){
-            NationChunk nChunk = Nations.getChunk(pos.x + i, pos.z + j);
-            if((i == 0 && j == 0) || nChunk == null || !chunks.contains(nChunk)) continue;
-            if(nChunk.isInfluenced()) surrounded++;
+      if(claim){
+         int surrounded = 0;
+         for(int i = -1; i <= 1; i++){
+            for(int j = -1; j <= 1; j++){
+               NationChunk nChunk = Nations.getChunk(pos.x + i, pos.z + j);
+               if((i == 0 && j == 0) || nChunk == null || !chunks.contains(nChunk)) continue;
+               if(nChunk.isInfluenced()) surrounded++;
+            }
          }
+         return surrounded >= 8;
+      }else{
+         List<Vector2i> chunkCoords = chunks.stream().map(c -> new Vector2i(c.getPos().x,c.getPos().z)).collect(Collectors.toCollection(ArrayList::new));
+         chunkCoords.add(new Vector2i(pos.x,pos.z));
+         boolean continuous = MiscUtils.isContinuous(chunkCoords);
+         boolean holes = MiscUtils.hasHoles(chunkCoords);
+         if(!continuous || holes) return false;
+         double threshold = NationsConfig.getDouble(NationsRegistry.TERRITORY_COMPACTNESS_MINIMUM_CFG);
+         double pp = MiscUtils.calculatePolsbyPopper(chunkCoords);
+         double re = MiscUtils.calculateReock(chunkCoords);
+         if(pp < threshold || re < threshold) return false;
+         return true;
       }
-      if(claim && surrounded < 8){
-         return false;
-      }else if(!claim && surrounded < 3){
-         return false;
-      }
-      return true;
    }
    
    public void updateChunk(NationChunk nationChunk){
@@ -1054,6 +1077,16 @@ public class Nation {
       return true;
    }
    
+   public int getBuffLevel(RegistryKey<ResearchTech> buff){
+      int level = 0;
+      for(ResearchTech completedTech : getCompletedTechs()){
+         if(completedTech.isBuff()){
+            if(completedTech.getBuff().equals(buff)) level++;
+         }
+      }
+      return level;
+   }
+   
    public MutableText getFormattedName(){
       return NationsColors.withColor(Text.literal(name),textColor);
    }
@@ -1062,10 +1095,6 @@ public class Nation {
       MutableText text = Text.literal("[").withColor(textColorSub).append(getFormattedName()).append(Text.literal("]").withColor(textColorSub));
       if(withSpace) text = text.append(Text.literal(" "));
       return text;
-   }
-   
-   private boolean isInfluenceContinuous(){
-      return MiscUtils.getConnectedSections(chunks.stream().filter(nc -> nc.getControllingNation().equals(this) && nc.isInfluenced()).map(NationChunk::getPos).toList()).size() == 1;
    }
    
    public List<BlockPos> getInfluenceCorners(){
@@ -1301,7 +1330,10 @@ public class Nation {
          
          NbtCompound researchComp = compound.getCompound("research");
          for(String key : researchComp.getKeys()){
-            research.put(NationsRegistry.RESEARCH.get(Identifier.of(MOD_ID,key)),researchComp.getInt(key));
+            ResearchTech tech = NationsRegistry.RESEARCH.get(Identifier.of(MOD_ID, key));
+            if (tech != null) {
+               research.put(tech, researchComp.getInt(key));
+            }
          }
          
          NbtCompound coinComp = compound.getCompound("coins");

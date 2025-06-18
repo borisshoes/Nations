@@ -25,13 +25,217 @@ import net.minecraft.util.Pair;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
+import org.joml.Vector2d;
 import org.joml.Vector2i;
 
 import java.util.*;
+import java.util.function.BiPredicate;
+import java.util.function.DoubleUnaryOperator;
 
 public class MiscUtils {
    
    private static final int CHUNK_SIZE = 16;
+   
+   public static boolean isContinuous(List<Vector2i> chunks) {
+      if (chunks == null || chunks.isEmpty()) return true;   // nothing to split
+      Set<Vector2i> occupied = new HashSet<>(chunks);
+      Deque<Vector2i> stack = new ArrayDeque<>();
+      Iterator<Vector2i> it = occupied.iterator();
+      stack.push(it.next());
+      
+      Set<Vector2i> seen = new HashSet<>();
+      while (!stack.isEmpty()) {
+         Vector2i cur = stack.pop();
+         if (!seen.add(cur)) continue;                      // already visited
+         int x = cur.x, y = cur.y;
+         
+         Vector2i n;                                       // neighbour
+         n = new Vector2i(x + 1, y); if (occupied.contains(n) && !seen.contains(n)) stack.push(n);
+         n = new Vector2i(x - 1, y); if (occupied.contains(n) && !seen.contains(n)) stack.push(n);
+         n = new Vector2i(x, y + 1); if (occupied.contains(n) && !seen.contains(n)) stack.push(n);
+         n = new Vector2i(x, y - 1); if (occupied.contains(n) && !seen.contains(n)) stack.push(n);
+      }
+      
+      return seen.size() == occupied.size();                 // all reached → one blob
+   }
+   
+   public static boolean hasHoles(List<Vector2i> chunks) {
+      if (chunks == null || chunks.isEmpty()) return false;   // no holes possible
+      
+      /* Occupancy set (same packing trick).                                    */
+      Set<Long> occ = new HashSet<>(chunks.size() * 2);
+      int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+      int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
+      
+      for (Vector2i p : chunks) {
+         occ.add((((long) p.x) << 32) ^ (p.y & 0xFFFF_FFFFL));
+         if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+         if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+      }
+      
+      /* Flood-fill from the OUTSIDE of the bounding box, expanded by one cell. */
+      int startX = minX - 1, startY = minY - 1;
+      int boundX0 = minX - 1, boundX1 = maxX + 1;
+      int boundY0 = minY - 1, boundY1 = maxY + 1;
+      
+      Set<Long> ext = new HashSet<>();
+      Deque<long[]> q = new ArrayDeque<>();
+      q.add(new long[]{startX, startY});
+      
+      while (!q.isEmpty()) {
+         long[] pos = q.removeFirst();
+         int x = (int) pos[0], y = (int) pos[1];
+         if (x < boundX0 || x > boundX1 || y < boundY0 || y > boundY1) continue;
+         
+         long key = (((long) x) << 32) ^ (y & 0xFFFF_FFFFL);
+         if (occ.contains(key) || !ext.add(key)) continue;  // already outside or filled
+         
+         q.add(new long[]{x + 1, y});
+         q.add(new long[]{x - 1, y});
+         q.add(new long[]{x, y + 1});
+         q.add(new long[]{x, y - 1});
+      }
+      
+      /* Any empty cell inside bounding box that was NOT reached is a hole.     */
+      for (int x = minX; x <= maxX; x++) {
+         for (int y = minY; y <= maxY; y++) {
+            long key = (((long) x) << 32) ^ (y & 0xFFFF_FFFFL);
+            if (!occ.contains(key) && !ext.contains(key))
+               return true;                         // found an internal hole
+         }
+      }
+      return false;                                      // solid, no holes
+   }
+   
+   public static double calculatePolsbyPopper(List<Vector2i> chunks) {
+      if (chunks == null || chunks.isEmpty())
+         throw new IllegalArgumentException("Point list must not be null or empty");
+      
+      // Store the occupied coordinates
+      Set<Vector2i> occupied = new HashSet<>(chunks.size()*2);
+      for (Vector2i v : chunks) occupied.add(new Vector2i(v));
+      
+      int perimeter = 0;
+      for (Vector2i v : chunks) {
+         int x = v.x, y = v.y;
+         if (!occupied.contains(new Vector2i(x+1,y))) perimeter++;
+         if (!occupied.contains(new Vector2i(x-1,y))) perimeter++;
+         if (!occupied.contains(new Vector2i(x,y+1))) perimeter++;
+         if (!occupied.contains(new Vector2i(x,y-1))) perimeter++;
+      }
+      
+      double area = chunks.size();
+      return perimeter == 0 ? 0.0 : 4.0 * Math.PI * area / (perimeter * perimeter);
+   }
+   
+   public static double calculateReock(List<Vector2i> chunks) {
+      if (chunks == null || chunks.isEmpty())
+         throw new IllegalArgumentException("Point list must not be null or empty");
+      
+      List<Vector2d> pts = new ArrayList<>(chunks.size());
+      for (Vector2i v : chunks){
+         pts.add(new Vector2d(v.x+0.5, v.y+0.5));
+         pts.add(new Vector2d(v.x-0.5, v.y+0.5));
+         pts.add(new Vector2d(v.x+0.5, v.y-0.5));
+         pts.add(new Vector2d(v.x-0.5, v.y-0.5));
+      }
+      
+      Circle mec = minimumEnclosingCircle(pts);
+      double radius = mec.r;
+      double areaCircle = Math.PI * radius * radius;
+      return chunks.size() / areaCircle;
+   }
+   
+   public static Vector2d calculateCentroid(List<Vector2i> points) {
+      if (points == null || points.isEmpty()) {
+         throw new IllegalArgumentException("Point list must not be null or empty");
+      }
+      long sumX = 0;
+      long sumY = 0;
+      for (Vector2i p : points) {
+         sumX += p.x;
+         sumY += p.y;
+      }
+      int n = points.size();
+      return new Vector2d(sumX / (double) n, sumY / (double) n);
+   }
+   
+   public static double calculateThirdTerritoryScaleParameter(double x1, double y1, double x2, double y2, double x3, double y3) {
+      double d = (y3 - y1) / (y1 - y2);
+      double a = x3;
+      double b = x1;
+      double c = x2;
+      
+      DoubleUnaryOperator f = x -> {
+         double ea = Math.exp(a * x);
+         double eb = Math.exp(b * x);
+         double ec = Math.exp(c * x);
+         return (ea - eb) / (eb - ec) - d;
+      };
+      
+      DoubleUnaryOperator fPrime = x -> {
+         double ea = Math.exp(a * x);
+         double eb = Math.exp(b * x);
+         double ec = Math.exp(c * x);
+         
+         double num = (a * ea - b * eb) * (eb - ec) - (ea - eb) * (b * eb - c * ec);
+         double den = (eb - ec) * (eb - ec);
+         return num / den;
+      };
+      
+      double tol = 1e-12;
+      double center = 1e-4;
+      double step = 1.0;
+      double left = Double.NaN, right = Double.NaN, fl = Double.NaN, fr = Double.NaN;
+      final int MAX_EXPANSION = 60;
+      boolean bracketed = false;
+      
+      for (int i = 0; i < MAX_EXPANSION; i++) {
+         left  = center - step;
+         right = center + step;
+         
+         fl = f.applyAsDouble(left);
+         fr = f.applyAsDouble(right);
+         
+         if (Double.isFinite(fl) && Double.isFinite(fr) && fl * fr <= 0.0) {
+            bracketed = true;
+            break;
+         }
+         step *= 2.0;
+      }
+      if (!bracketed) throw new IllegalArgumentException("Unable to bracket a root.");
+      
+      double mid = 0.0, fm;
+      for (int i = 0; i < 60; i++) {
+         mid = 0.5 * (left + right);
+         fm  = f.applyAsDouble(mid);
+         
+         if (!Double.isFinite(fm)) {
+            mid += (right - left) * 1e-12;
+            fm = f.applyAsDouble(mid);
+         }
+         
+         if (fm == 0.0) break;
+         if (fl * fm < 0.0) {
+            right = mid;  fr = fm;
+         } else {
+            left  = mid;  fl = fm;
+         }
+         if (Math.abs(right - left) <= tol * Math.max(1.0, Math.abs(mid)))
+            break;
+      }
+      
+      double x = mid;
+      for (int i = 0; i < 8; i++) {
+         double fx  = f.applyAsDouble(x);
+         double fpx = fPrime.applyAsDouble(x);
+         double dx  = fx / fpx;
+         x -= dx;
+         if (Math.abs(dx) <= tol * Math.max(1.0, Math.abs(x))) return x;
+      }
+      if (Math.abs(f.applyAsDouble(x)) < 1e-8) return x;
+      throw new ArithmeticException("Newton iteration failed to converge.");
+   }
    
    public static Pair<ContainerComponent,ItemStack> tryAddStackToContainerComp(ContainerComponent container, int size, ItemStack stack){
       List<ItemStack> beltList = new ArrayList<>(container.stream().toList());
@@ -617,5 +821,62 @@ public class MiscUtils {
          text.append(Text.translatable("text.nations.seconds"));
       }
       return text;
+   }
+   
+   private static class Circle {
+      final Vector2d c;   // centre
+      final double   r;   // radius
+      Circle(Vector2d c, double r) { this.c = c; this.r = r; }
+   }
+   
+   private static Circle minimumEnclosingCircle(List<Vector2d> pts) {
+      Collections.shuffle(pts, new Random());           // randomised guarantee
+      Circle c = new Circle(pts.get(0), 0.0);
+      
+      for (int i = 1; i < pts.size(); i++) {
+         if (!inside(c, pts.get(i))) {
+            c = new Circle(pts.get(i), 0.0);
+            for (int j = 0; j < i; j++) {
+               if (!inside(c, pts.get(j))) {
+                  c = makeDiameter(pts.get(i), pts.get(j));
+                  for (int k = 0; k < j; k++) {
+                     if (!inside(c, pts.get(k))) {
+                        c = circumCircle(pts.get(i), pts.get(j), pts.get(k));
+                     }
+                  }
+               }
+            }
+         }
+      }
+      return c;
+   }
+   
+   private static boolean inside(Circle c, Vector2d p) {
+      return c.c.distanceSquared(p) <= c.r * c.r + 1e-9; // epsilon for fp-error
+   }
+   
+   /* Circle defined by diameter pq */
+   private static Circle makeDiameter(Vector2d p, Vector2d q) {
+      Vector2d centre = new Vector2d(p).add(q).mul(0.5);
+      double    rad   = centre.distance(p);
+      return new Circle(centre, rad);
+   }
+   
+   /* Circum-circle through three non-colinear points */
+   private static Circle circumCircle(Vector2d a, Vector2d b, Vector2d c) {
+      double d = 2 * (a.x*(b.y - c.y) + b.x*(c.y - a.y) + c.x*(a.y - b.y));
+      if (Math.abs(d) < 1e-12)                                    // colinear
+         return new Circle(new Vector2d(0, 0), Double.POSITIVE_INFINITY);
+      
+      double ux = ((a.lengthSquared()) * (b.y - c.y) +
+            (b.lengthSquared()) * (c.y - a.y) +
+            (c.lengthSquared()) * (a.y - b.y)) / d;
+      double uy = ((a.lengthSquared()) * (c.x - b.x) +
+            (b.lengthSquared()) * (a.x - c.x) +
+            (c.lengthSquared()) * (b.x - a.x)) / d;
+      
+      Vector2d centre = new Vector2d(ux, uy);
+      double   rad    = centre.distance(a);
+      return new Circle(centre, rad);
    }
 }
