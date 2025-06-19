@@ -359,7 +359,7 @@ public class NationsRegistry {
          new ConfigUtils.DoubleConfigValue("colonialismIncrease", 0.2, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
    
    public static final NationsConfig.ConfigSetting<?> SCHOLARSHIP_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
-         new ConfigUtils.DoubleConfigValue("scholarshipIncrease", 0.05, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+         new ConfigUtils.DoubleConfigValue("scholarshipIncrease", 0.1, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
    
    public static final NationsConfig.ConfigSetting<?> BARTERING_DISCOUNT_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.DoubleConfigValue("barteringDiscount", 0.15, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));

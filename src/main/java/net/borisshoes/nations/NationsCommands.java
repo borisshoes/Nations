@@ -40,6 +40,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Heightmap;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
+import org.joml.Vector2d;
 import org.joml.Vector2i;
 
 import java.io.BufferedWriter;
@@ -1630,6 +1631,7 @@ public class NationsCommands {
          int claimCount = (int) nation.getChunks().stream().filter(c -> nation.equals(c.getControllingNation()) && c.isClaimed()).count();
          double ppScore = MiscUtils.calculatePolsbyPopper(chunkCoords);
          double reScore = MiscUtils.calculateReock(chunkCoords);
+         Vector2d centroid = MiscUtils.calculateCentroid(chunkCoords);
          double combined = Math.sqrt(ppScore*reScore);
          int vp = nation.getVictoryPoints();
          Map<ResourceType,Integer> coinYield = nation.calculateCoinYield(src.getServer().getOverworld());
@@ -1661,7 +1663,7 @@ public class NationsCommands {
          int subColor = nation.getTextColorSub();
          
          src.sendMessage(nation.getFormattedNameTag(false));
-         src.sendMessage(Text.translatable("text.nations.settled_at",Text.literal(foundingPos).withColor(subColor)).withColor(mainColor));
+         src.sendMessage(Text.translatable("text.nations.settled_and_centered_at",Text.literal(foundingPos).withColor(subColor),Text.literal(String.format("%03.2f",centroid.x)+", "+String.format("%03.2f",centroid.y)).withColor(subColor)).withColor(mainColor));
          src.sendMessage(Text.translatable("text.nations.territory_count",
                Text.translatable("text.nations.influence_count",String.format("%,d",influenceCount)).withColor(subColor),
                Text.translatable("text.nations.claim_count",String.format("%,d",claimCount)).withColor(subColor)
