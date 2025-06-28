@@ -1001,7 +1001,7 @@ public class Nation {
    
    public boolean canClaimOrInfluenceChunk(ChunkPos pos){
       NationChunk chunk = Nations.getChunk(pos);
-      if(chunk == null || !NationsLand.unclaimedOrSameNation(pos,this) || chunk.isClaimed() || NationsLand.isSpawnDMZChunk(pos.getBlockPos(0,0,0))){
+      if(chunk == null || !isFounded() || !NationsLand.unclaimedOrSameNation(pos,this) || chunk.isClaimed() || NationsLand.isSpawnDMZChunk(pos.getBlockPos(0,0,0))){
          return false;
       }
       

@@ -838,7 +838,7 @@ public class NationsRegistry {
                   new Pair<>(Enchantments.SMITE,1), new Pair<>(Enchantments.SMITE,2), new Pair<>(Enchantments.POWER,1), new Pair<>(Enchantments.POWER,2),
                   new Pair<>(Enchantments.LOYALTY,1), new Pair<>(Enchantments.LOYALTY,2), new Pair<>(Enchantments.SHARPNESS,1), new Pair<>(Enchantments.PROTECTION,1), new Pair<>(Enchantments.WIND_BURST,1),
                   new Pair<>(ArcanaRegistry.FATE_ANCHOR,1), new Pair<>(Enchantments.EFFICIENCY,1), new Pair<>(Enchantments.EFFICIENCY,2))
-            .addArcanaLock(ArcanaRegistry.SPAWNER_HARNESS));
+            .addArcanaLock(ArcanaRegistry.SPAWNER_HARNESS, ArcanaRegistry.CONTINUUM_ANCHOR));
       registerTech(SMITHING, new ResearchTech(SMITHING,3,new RegistryKey[]{ARCANA,TEMPERED_WEAPONS,ANNEALED_ARMOR},RESEARCH_COST_SMITHING_CFG,RESEARCH_RATE_SMITHING_CFG).withShowStack(Items.ANVIL)
             .addArcanaLock(ArcanaRegistry.MAGMATIC_EVERSOURCE, ArcanaRegistry.ARCANISTS_BELT));
       registerTech(FLETCHING, new ResearchTech(FLETCHING,3,new RegistryKey[]{ARCANA,FIBERGLASS_COMPOSITE,ENHANCED_ALCHEMY},RESEARCH_COST_FLETCHING_CFG,RESEARCH_RATE_FLETCHING_CFG).withShowStack(Items.FLETCHING_TABLE)
@@ -866,7 +866,7 @@ public class NationsRegistry {
             .addArcanaLock(ArcanaRegistry.SOULSTONE, ArcanaRegistry.IGNEOUS_COLLIDER, ArcanaRegistry.BINARY_BLADES, ArcanaRegistry.GRAVITON_MAUL, ArcanaRegistry.SHADOW_STALKERS_GLAIVE, ArcanaRegistry.SHIELD_OF_FORTITUDE,
                   ArcanaRegistry.SOJOURNER_BOOTS, ArcanaRegistry.TOTEM_OF_VENGEANCE));
       registerTech(RUNIC_ARCHERY, new ResearchTech(RUNIC_ARCHERY,4,new RegistryKey[]{FLETCHING},RESEARCH_COST_RUNIC_ARCHERY_CFG,RESEARCH_RATE_RUNIC_ARCHERY_CFG).withShowStack(ArcanaRegistry.RUNIC_BOW.getPrefItemNoLore())
-            .addArcanaLock(ArcanaRegistry.RUNIC_BOW, ArcanaRegistry.RUNIC_QUIVER, ArcanaRegistry.ARCANE_FLAK_ARROWS, ArcanaRegistry.BLINK_ARROWS, ArcanaRegistry.CONCUSSION_ARROWS, ArcanaRegistry.DETONATION_ARROWS,
+            .addArcanaLock(ArcanaRegistry.RUNIC_BOW, ArcanaRegistry.RUNIC_QUIVER, ArcanaRegistry.ARCANE_FLAK_ARROWS, ArcanaRegistry.BLINK_ARROWS, ArcanaRegistry.CONCUSSION_ARROWS,
                   ArcanaRegistry.ENSNAREMENT_ARROWS, ArcanaRegistry.EXPULSION_ARROWS, ArcanaRegistry.GRAVITON_ARROWS, ArcanaRegistry.PHOTONIC_ARROWS, ArcanaRegistry.SIPHONING_ARROWS, ArcanaRegistry.SMOKE_ARROWS,
                   ArcanaRegistry.STORM_ARROWS, ArcanaRegistry.TETHER_ARROWS, ArcanaRegistry.TRACKING_ARROWS));
       registerTech(BASIC_AUGMENTATION, new ResearchTech(BASIC_AUGMENTATION,4,new RegistryKey[]{SMITHING},RESEARCH_COST_BASIC_AUGMENTATION_CFG,RESEARCH_RATE_BASIC_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.CATALYTIC_MATRIX.getPrefItemNoLore())
