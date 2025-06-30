@@ -310,6 +310,9 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> WAR_DEFENSE_RADIUS_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("warDefenseRadius", 64, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
+   public static final NationsConfig.ConfigSetting<?> WAR_MINIMUM_CAPTURE_POINT_DIFFERENCE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warMinimumCapturePointDifference", 12, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
+   
    public static final NationsConfig.ConfigSetting<?> STACK_OVERDAMAGE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("stackOverdamageAmount", 5, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
@@ -883,7 +886,7 @@ public class NationsRegistry {
             .addArcanaLock(ArcanaRegistry.NUL_MEMENTO,ArcanaRegistry.SPAWNER_INFUSER,ArcanaRegistry.AEQUALIS_SCIENTIA));
 //      registerTech(ENHANCED_AUGMENTATION, new ResearchTech(ENHANCED_AUGMENTATION,6,new RegistryKey[]{BASIC_AUGMENTATION},RESEARCH_COST_ENHANCED_AUGMENTATION_CFG,RESEARCH_RATE_ENHANCED_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.EMPOWERED_CATALYST.getPrefItemNoLore())
 //            .addArcanaLock(ArcanaRegistry.EMPOWERED_CATALYST, ArcanaRegistry.EXOTIC_CATALYST));
-      registerTech(ADVANCED_AUGMENTATION, new ResearchTech(ADVANCED_AUGMENTATION,5,new RegistryKey[]{ENHANCED_AUGMENTATION},RESEARCH_COST_ADVANCED_AUGMENTATION_CFG,RESEARCH_RATE_ADVANCED_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.SOVEREIGN_CATALYST.getPrefItemNoLore())
+      registerTech(ADVANCED_AUGMENTATION, new ResearchTech(ADVANCED_AUGMENTATION,5,new RegistryKey[]{BASIC_AUGMENTATION},RESEARCH_COST_ADVANCED_AUGMENTATION_CFG,RESEARCH_RATE_ADVANCED_AUGMENTATION_CFG).withShowStack(ArcanaRegistry.SOVEREIGN_CATALYST.getPrefItemNoLore())
             .addArcanaLock(ArcanaRegistry.SOVEREIGN_CATALYST, ArcanaRegistry.DIVINE_CATALYST));
       
       setupNationBuffTechs();

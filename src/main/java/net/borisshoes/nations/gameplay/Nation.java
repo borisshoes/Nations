@@ -169,7 +169,7 @@ public class Nation {
             if(activeTech != null){
                double increase = NationsConfig.getDouble(NationsRegistry.SCHOLARSHIP_INCREASE_CFG);
                int scholarshipLvl = getBuffLevel(NationsRegistry.SCHOLARSHIP);
-               int rate = (int)(activeTech.getConsumptionRate()*(1+increase*scholarshipLvl)) / 24;
+               int rate = (int)(activeTech.getConsumptionRate()*(1+increase*scholarshipLvl)+1E-7) / 24;
                int progress = getProgress(activeTech);
                int cost = activeTech.getCost();
                int remaining = cost - progress;
@@ -218,7 +218,7 @@ public class Nation {
             if(activeTech != null){
                double increase = NationsConfig.getDouble(NationsRegistry.SCHOLARSHIP_INCREASE_CFG);
                int scholarshipLvl = getBuffLevel(NationsRegistry.SCHOLARSHIP);
-               int rate = (int)(activeTech.getConsumptionRate()*(1+increase*scholarshipLvl)) % 24;
+               int rate = (int)(activeTech.getConsumptionRate()*(1+increase*scholarshipLvl)+1E-7) % 24;
                int progress = getProgress(activeTech);
                int cost = activeTech.getCost();
                int remaining = cost - progress;
@@ -456,6 +456,14 @@ public class Nation {
    
    public Vec3d getHologramPos(){
       return this.isFounded() ? this.foundLocation.getBlockPos(7,foundHeight,7).toCenterPos().add(0.5,4,0.5) : null;
+   }
+   
+   public int getCapCount(){
+      int sum = 0;
+      for(CapturePoint capturePoint : getCapturePoints()){
+         if(this.equals(capturePoint.getControllingNation())) sum++;
+      }
+      return sum;
    }
    
    public void queueTechFirst(ResearchTech tech){

@@ -160,7 +160,8 @@ public class ResearchTech {
             }
          }
          if(!found){
-            missing.add(NationsRegistry.RESEARCH.get(prereq));
+            ResearchTech tech = NationsRegistry.RESEARCH.get(prereq);
+            if(tech != null) missing.add(tech);
          }
       }
       return missing;

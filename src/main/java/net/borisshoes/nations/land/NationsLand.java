@@ -222,6 +222,10 @@ public class NationsLand {
    
    public static boolean canPlaceBlock(World world, ServerPlayerEntity player, BlockPos pos, ItemStack stack, boolean message){
       if(isOutOfBounds(world.getRegistryKey(),pos)) return false;
+      if(world.getRegistryKey().equals(NationsRegistry.CONTEST_DIM) && (stack.isOf(Items.END_CRYSTAL) || stack.isOf(Items.RESPAWN_ANCHOR))){
+         if(message) sendPermissionMessage(player,pos);
+         return false;
+      }
       if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
       if(PLAYER_DATA.get(player).bypassesClaims()) return true;
       ChunkPos chunkPos = new ChunkPos(pos);
@@ -237,6 +241,10 @@ public class NationsLand {
    
    public static boolean canUseItemOnBlock(World world, ServerPlayerEntity player, BlockPos pos, ItemStack stack, boolean message){
       if(isOutOfBounds(world.getRegistryKey(),pos)) return false;
+      if(world.getRegistryKey().equals(NationsRegistry.CONTEST_DIM) && (stack.isOf(Items.END_CRYSTAL) || stack.isOf(Items.RESPAWN_ANCHOR))){
+         if(message) sendPermissionMessage(player,pos);
+         return false;
+      }
       if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
       if(PLAYER_DATA.get(player).bypassesClaims()) return true;
       ChunkPos chunkPos = new ChunkPos(pos);
@@ -260,10 +268,14 @@ public class NationsLand {
    }
    
    public static boolean canUseItem(World world, ServerPlayerEntity player, ItemStack stack, Hand hand, boolean message){
+      BlockPos pos = player.getBlockPos();
+      if(world.getRegistryKey().equals(NationsRegistry.CONTEST_DIM) && (stack.isOf(Items.END_CRYSTAL) || stack.isOf(Items.RESPAWN_ANCHOR))){
+         if(message) sendPermissionMessage(player,pos);
+         return false;
+      }
       if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
       if(PLAYER_DATA.get(player).bypassesClaims()) return true;
       BlockHitResult hitResult = getPlayerHitResult(world, player, RaycastContext.FluidHandling.SOURCE_ONLY);
-      BlockPos pos = player.getBlockPos();
       if (hitResult.getType() == HitResult.Type.BLOCK) {
          pos = new ItemPlacementContext(player, hand, stack, hitResult).getBlockPos();
       }
@@ -317,6 +329,10 @@ public class NationsLand {
    public static boolean canUseOtherBlocks(World world, ServerPlayerEntity player, ItemStack stack, BlockPos pos, boolean message){
       if(world.getBlockState(pos).getRegistryEntry().getIdAsString().contains("universal_graves")) return true;
       if(isOutOfBounds(world.getRegistryKey(),pos)) return false;
+      if(world.getRegistryKey().equals(NationsRegistry.CONTEST_DIM) && (stack.isOf(Items.END_CRYSTAL) || stack.isOf(Items.RESPAWN_ANCHOR))){
+         if(message) sendPermissionMessage(player,pos);
+         return false;
+      }
       if(!world.getRegistryKey().equals(ServerWorld.OVERWORLD)) return true;
       if(PLAYER_DATA.get(player).bypassesClaims()) return true;
       if(isSpawnChunk(pos)){

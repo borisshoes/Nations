@@ -20,6 +20,7 @@ import net.minecraft.entity.boss.CommandBossBar;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.network.packet.s2c.play.*;
+import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -50,6 +51,7 @@ public class WarManager {
    private static final HashMap<CapturePoint,ServerPlayerEntity> PENDING_CONTESTS = new HashMap<>();
    private static final HashMap<CapturePoint,List<Nation>> LOCKED_CAPS = new HashMap<>();
    private static final HashMap<Nation,Integer> ATTACKS_ISSUED = new HashMap<>();
+   private static final List<Pair<Nation,Nation>> ATTACK_PAIRS = new ArrayList<>();
    
    private static long warStart = 0;
    private static boolean warActive = false;
@@ -217,6 +219,10 @@ public class WarManager {
       int curAtks = ATTACKS_ISSUED.getOrDefault(atkNation,0);
       ATTACKS_ISSUED.put(atkNation,curAtks+1);
       
+      if(capturePoint.getControllingNation() != null){
+         ATTACK_PAIRS.add(new Pair<>(atkNation,capturePoint.getControllingNation()));
+      }
+      
       Text controllingNationText = capturePoint.getControllingNation() == null ? Text.translatable("text.nations.unclaimed_tag") : capturePoint.getControllingNation().getFormattedNameTag(false);
       MutableText announcement = Text.translatable("text.nations.cap_duel_contested",
             controllingNationText,
@@ -265,6 +271,10 @@ public class WarManager {
       if(!isWarActive() || !canAttack()) return false;
       if(capNation == null || atkNation == null) return false;
       if(capNation.equals(atkNation)) return false;
+      int defenderCaps = capNation.getCapCount();
+      int attackerCaps = atkNation.getCapCount();
+      int minDiff = NationsConfig.getInt(NationsRegistry.WAR_MINIMUM_CAPTURE_POINT_DIFFERENCE_CFG);
+      if(attackerCaps - defenderCaps >= minDiff && ATTACK_PAIRS.stream().noneMatch(pair -> pair.getLeft().equals(capNation) && pair.getRight().equals(atkNation))) return false;
       if(PENDING_CONTESTS.containsKey(capturePoint)) return false;
       if(ACTIVE_CONTESTS.stream().anyMatch(contest -> contest.capturePoint().equals(capturePoint))) return false;
       if(isLocked(capturePoint,player)) return false;
@@ -283,6 +293,7 @@ public class WarManager {
       PENDING_CONTESTS.clear();
       LOCKED_CAPS.clear();
       ATTACKS_ISSUED.clear();
+      ATTACK_PAIRS.clear();
       int warDuration = NationsConfig.getInt(NationsRegistry.WAR_DURATION_CFG);
       Nations.announce(Text.translatable("text.nations.war_announcement",MiscUtils.getTimeDiff(warDuration * 60000L).formatted(Formatting.BOLD,Formatting.RED)).formatted(Formatting.DARK_RED,Formatting.BOLD));
       Nations.announce(Text.translatable("text.nations.war_reminder_1").formatted(Formatting.GOLD));
@@ -550,7 +561,7 @@ public class WarManager {
          BlockPos beaconPos = cap.getBeaconPos();
          for(int x = -1; x <= 1; x++){
             for(int z = -1; z <= 1; z++){
-               contestWorld.setBlockState(beaconPos.add(x,0,z),Blocks.BEDROCK.getDefaultState());
+               contestWorld.setBlockState(beaconPos.add(x,0,z),NationsRegistry.CONTEST_BOUNDARY_BLOCK.getDefaultState());
             }
          }
       }));
@@ -597,7 +608,7 @@ public class WarManager {
       
       for(BlockPos blockPos : BlockPos.iterate(corner1, corner2)){
          BlockState blockState = overworld.getBlockState(blockPos);
-         if(blockState.hasBlockEntity() || blockState.isAir()) continue;
+         if(blockState.hasBlockEntity() || blockState.isAir() || blockState.getBlock() == Blocks.RESPAWN_ANCHOR) continue;
          contestWorld.setBlockState(blockPos,blockState, Block.FORCE_STATE+Block.SKIP_DROPS+Block.REDRAW_ON_MAIN_THREAD);
       }
    }
@@ -664,8 +675,10 @@ public class WarManager {
                ParticleEffectUtils.netherRiftTeleport(overworld,player.getPos(),0);
             }
             
-            if(attackerPlayer != null && attackerPlayer.squaredDistanceTo(capturePoint.getBeaconPos().toCenterPos().add(0,3,0)) <= 25){
-               if(defenderPlayer == null || !(defenderPlayer.squaredDistanceTo(capturePoint.getBeaconPos().toCenterPos().add(0,3,0)) <= 25))
+            Vec3d center = capturePoint.getBeaconPos().toCenterPos().add(0,3,0);
+            float centerRadius = 5;
+            if(attackerPlayer != null && attackerPlayer.squaredDistanceTo(center) <= centerRadius*centerRadius){
+               if(defenderPlayer == null || !(defenderPlayer.squaredDistanceTo(center) <= centerRadius*centerRadius))
                   attackOnCapTicks++;
             }else if(attackOnCapTicks > 0){
                attackOnCapTicks -= Math.min(attackOnCapTicks,5);
@@ -707,6 +720,9 @@ public class WarManager {
                if(defenderPlayer != null){
                   defenderPlayer.sendMessage(captureText,true);
                }
+               
+               double theta = Math.PI * 2 * age / 200;
+               ParticleEffectUtils.sphere(contestWorld,null,center,new DustParticleEffect(0xee6600,0.5f),centerRadius,(int)(5*centerRadius*centerRadius),1,0.1,1,theta);
             }
             
             bossBar.setName(getBossbarText());

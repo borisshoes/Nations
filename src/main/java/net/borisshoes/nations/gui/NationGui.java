@@ -48,6 +48,7 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
    private boolean updating = false;
    
    private int pageNum;
+   private int researchPageNum;
    private GuiSort sort;
    private GuiFilter filter;
    private List itemList;
@@ -98,6 +99,20 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
             if(pageNum < numPages){
                pageNum += 1;
                build();
+            }
+         }
+         if(mode == Mode.RESEARCH){
+            if(index == 45){
+               if(researchPageNum > 1){
+                  researchPageNum -= 1;
+                  build();
+               }
+            }else if(index == 53){
+               int numResearchPages = (int) (Math.ceil((float)nation.getTechQueue().size()/7));
+               if(researchPageNum < numResearchPages){
+                  researchPageNum += 1;
+                  build();
+               }
             }
          }
       }else{
@@ -345,13 +360,61 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
       
       List<ResearchTech> techQueue = nation.getTechQueue().stream().toList();
       
+      int numResearchPages = Math.max(1,(int) (Math.ceil((float)techQueue.size()/7)));
+      researchPageNum = Math.clamp(researchPageNum,1,numResearchPages);
+      GuiElementBuilder nextPage = GuiElementBuilder.from(GraphicalItem.with(GraphicalItem.GraphicItems.RIGHT_ARROW));
+      nextPage.setName(Text.translatable("gui.nations.next_page_title",researchPageNum,numResearchPages).formatted(Formatting.DARK_PURPLE));
+      nextPage.addLoreLine((Text.literal("")
+            .append(Text.translatable("gui.nations.click").formatted(Formatting.AQUA))
+            .append(Text.translatable("gui.nations.next_page_sub").formatted(Formatting.LIGHT_PURPLE))));
+      setSlot(53, nextPage);
+      
+      GuiElementBuilder prevPage = GuiElementBuilder.from(GraphicalItem.with(GraphicalItem.GraphicItems.LEFT_ARROW));
+      prevPage.setName(Text.translatable("gui.nations.prev_page_title",researchPageNum,numResearchPages).formatted(Formatting.DARK_PURPLE));
+      prevPage.addLoreLine((Text.literal("")
+            .append(Text.translatable("gui.nations.click").formatted(Formatting.AQUA))
+            .append(Text.translatable("gui.nations.prev_page_sub").formatted(Formatting.LIGHT_PURPLE))));
+      setSlot(45, prevPage);
+      
+      int[] ticks = new int[techQueue.size()];
+      int[] rates = new int[techQueue.size()];
+      int scholarshipSimLvl = scholarshipLvl;
       int queueTicks = 0;
+      for(int i = 0; i < techQueue.size(); i++){
+         ResearchTech tech = techQueue.get(i);
+         int rate = (int)(tech.getConsumptionRate()*(1+increase*scholarshipSimLvl)+1E-7);
+         rates[i] = rate;
+         int prog = nation.getProgress(tech);
+         int cost = tech.getCost();
+         int completion = cost - prog;
+         int hourRate = rate / 24;
+         int remRate = rate % 24;
+         ZonedDateTime now = ZonedDateTime.now(ZoneId.systemDefault());
+         ZonedDateTime startOfNextHour = now.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+         int tickCount = 0;
+         while(completion > 0){
+            ZonedDateTime noon = startOfNextHour.withHour(12).withMinute(0).withSecond(0).withNano(0);
+            if(noon.isEqual(startOfNextHour)){
+               completion -= remRate;
+            }
+            completion -= hourRate;
+            tickCount++;
+            startOfNextHour = startOfNextHour.plusHours(1);
+         }
+         queueTicks += tickCount;
+         ticks[i] = queueTicks;
+         if(tech.isBuff() && tech.getBuff().equals(NationsRegistry.SCHOLARSHIP)){
+            scholarshipSimLvl++;
+         }
+      }
+      
+      int pageOffset = (researchPageNum-1) * 7;
       for(int i = 0; i < 7; i++){
-         int index = 46+i;
-         
-         if(i < techQueue.size()){
-            ResearchTech tech = techQueue.get(i);
-            int rate = (int)(tech.getConsumptionRate()*(1+increase*scholarshipLvl));
+         int guiIndex = 46+i;
+         int researchInd = i+pageOffset;
+         if(researchInd < techQueue.size()){
+            ResearchTech tech = techQueue.get(researchInd);
+            int rate = rates[researchInd];
             GuiElementBuilder elem = GuiElementBuilder.from(tech.getShowItem()).hideDefaultTooltip();
             elem.setName(tech.getName().formatted(Formatting.BOLD,Formatting.AQUA));
             elem.addLoreLine(Text.empty()
@@ -374,37 +437,23 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
                      .append(Text.literal(" ("+String.format("%03.2f",percent)+"%)").formatted(Formatting.AQUA))
                );
             }
-            int completion = cost - prog;
-            int hourRate = rate / 24;
-            int remRate = rate % 24;
-            ZonedDateTime now = ZonedDateTime.now(ZoneId.systemDefault());
-            ZonedDateTime startOfNextHour = now.truncatedTo(ChronoUnit.HOURS).plusHours(1);
-            int tickCount = 0;
-            while(completion > 0){
-               ZonedDateTime noon = startOfNextHour.withHour(12).withMinute(0).withSecond(0).withNano(0);
-               if(noon.isEqual(startOfNextHour)){
-                  completion -= remRate;
-               }
-               completion -= hourRate;
-               tickCount++;
-               startOfNextHour = startOfNextHour.plusHours(1);
-            }
-            queueTicks += tickCount;
+            
+            int tickCount = ticks[researchInd];
             elem.addLoreLine(Text.translatable("text.nations.estimated_completion",
-                  Text.literal(String.format("%,d",queueTicks)+" ").formatted(Formatting.AQUA)
+                  Text.literal(String.format("%,d",tickCount)+" ").formatted(Formatting.AQUA)
                         .append(Text.translatable("text.nations.hours").formatted(Formatting.DARK_AQUA))
             ).formatted(Formatting.BLUE));
             
             elem.addLoreLine(Text.empty());
             
-            if(i > 0){
-               ResearchTech prevTech = techQueue.get(i-1);
+            if(researchInd > 0){
+               ResearchTech prevTech = techQueue.get(researchInd-1);
                if(!tech.hasPrereq(prevTech)){ // Can move up
                   elem.addLoreLine(Text.literal("").append(Text.translatable("gui.nations.click").formatted(Formatting.AQUA)).append(Text.translatable("gui.nations.research_queue_up").formatted(Formatting.DARK_PURPLE)));
                }
             }
-            if(i != techQueue.size()-1){
-               ResearchTech nextTech = techQueue.get(i+1);
+            if(researchInd != techQueue.size()-1){
+               ResearchTech nextTech = techQueue.get(researchInd+1);
                if(!nextTech.hasPrereq(tech)){ // Can move down
                   elem.addLoreLine(Text.literal("").append(Text.translatable("gui.nations.right_click").formatted(Formatting.GREEN)).append(Text.translatable("gui.nations.research_queue_down").formatted(Formatting.DARK_PURPLE)));
                }
@@ -412,9 +461,9 @@ public class NationGui extends SimpleGui implements InventoryChangedListener {
             elem.addLoreLine(Text.literal("").append(Text.translatable("gui.nations.shift_click").formatted(Formatting.RED)).append(Text.translatable("gui.nations.research_dequeue").formatted(Formatting.YELLOW)));
             elem.setCallback(clickType -> modifyTechQueue(tech, clickType));
             
-            setSlot(index,elem);
+            setSlot(guiIndex,elem);
          }else{
-            setSlot(46+i,blank);
+            setSlot(guiIndex,blank);
          }
       }
       
