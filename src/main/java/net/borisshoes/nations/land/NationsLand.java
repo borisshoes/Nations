@@ -637,11 +637,12 @@ public class NationsLand {
    }
    
    public static boolean redstoneEnabled(RegistryKey<World> world, ChunkPos chunkPos){
-      if(isOutOfBounds(world,chunkPos)) return false;
-      if(!world.equals(ServerWorld.OVERWORLD)) return false;
-      NationChunk chunk = Nations.getChunk(chunkPos);
-      if(chunk == null) return false;
-      return chunk.hasMachinery();
+      return true;
+//      if(isOutOfBounds(world,chunkPos)) return false;
+//      if(!world.equals(ServerWorld.OVERWORLD)) return false;
+//      NationChunk chunk = Nations.getChunk(chunkPos);
+//      if(chunk == null) return false;
+//      return chunk.hasMachinery();
    }
    
    public static int getRandomTickCount(RegistryKey<World> world, ChunkPos chunkPos){
