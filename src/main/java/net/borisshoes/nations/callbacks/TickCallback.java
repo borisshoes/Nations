@@ -121,7 +121,7 @@ public class TickCallback {
                            for(int j = level; j >= 1; j--){
                               boolean canSupport = profile.getNation().canEnchant(enchantment.getKey().get(),j);
                               if(canSupport){
-                                 newLevel = Math.min(level,newLevel+1);
+                                 newLevel = Math.min(level,j+1);
                                  break;
                               }
                            }

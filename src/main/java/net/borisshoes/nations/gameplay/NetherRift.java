@@ -102,7 +102,7 @@ public class NetherRift {
          int chunkX = (int) (Math.random() * (2*radius) - radius);
          int chunkZ = (int) (Math.random() * (2*radius) - radius);
          chunk = Nations.getChunk(chunkX,chunkZ);
-         if(chunk != null){
+         if(chunk != null && chunk.getControllingNation() == null){
             break;
          }
       }
