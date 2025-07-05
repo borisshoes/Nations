@@ -24,17 +24,20 @@ public class ItemStackMixin {
       ItemStack stack = (ItemStack) (Object) this;
       ItemEnchantmentsComponent enchants = stack.getEnchantments();
       int extra = NationsConfig.getInt(NationsRegistry.STACK_OVERDAMAGE_CFG);
-      int count = 1;
       if(ArcanaItemUtils.isArcane(stack)) return original;
       if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem())) return original;
       if(!(player instanceof ServerPlayerEntity serverPlayer)) return original;
       Nation nation = Nations.getNation(serverPlayer);
       if(nation == null) return original;
+      int count = nation.canCraft(stack.getItem()) ? 0 : 1;
       for(RegistryEntry<Enchantment> enchantment : enchants.getEnchantments()){
-         if(!nation.canEnchant(enchantment.getKey().get(),enchants.getLevel(enchantment))){
-            count++;
+         int level = enchants.getLevel(enchantment);
+         for(int i = 1; i <= level; i++){
+            if(!nation.canEnchant(enchantment.getKey().get(),i)){
+               count++;
+            }
          }
       }
-      return nation.canCraft(stack.getItem()) ? original : original + (extra*count);
+      return original + (extra*count);
    }
 }
