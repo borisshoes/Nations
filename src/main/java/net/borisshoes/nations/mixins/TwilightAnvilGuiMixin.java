@@ -27,11 +27,11 @@ public class TwilightAnvilGuiMixin {
       ItemStack input1 = original.input1();
       ItemStack input2 = original.input2();
       
-      if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem())) return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
-      if(!(player instanceof ServerPlayerEntity serverPlayer)) return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
-      if(ArcanaItemUtils.isArcane(stack)) return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
+      if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem())) return original;
+      if(!(player instanceof ServerPlayerEntity serverPlayer)) return original;
+      if(ArcanaItemUtils.isArcane(stack)) return original;
       Nation nation = Nations.getNation(serverPlayer);
-      if(nation == null) return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
+      if(nation == null) return original;
       boolean canCraft = nation.canCraft(stack.getItem());
       if(!canCraft){
          return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
@@ -53,11 +53,11 @@ public class TwilightAnvilGuiMixin {
       ItemStack input1 = original.input1();
       ItemStack input2 = original.input2();
       
-      if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem())) return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
-      if(!(player instanceof ServerPlayerEntity serverPlayer)) return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
-      if(ArcanaItemUtils.isArcane(stack)) return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
+      if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem())) return original;
+      if(!(player instanceof ServerPlayerEntity serverPlayer)) return original;
+      if(ArcanaItemUtils.isArcane(stack)) return original;
       Nation nation = Nations.getNation(serverPlayer);
-      if(nation == null) return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
+      if(nation == null) return original;
       boolean canCraft = nation.canCraft(stack.getItem());
       if(!canCraft){
          return new TwilightAnvilBlockEntity.AnvilOutputSet(input1, input2, ItemStack.EMPTY, 0, 0);
