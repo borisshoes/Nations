@@ -705,7 +705,7 @@ public class WarManager {
                   size = 0.75f;
                }
             }else if(attackOnCapTicks > 0){
-               if(age % 5 == 0){
+               if(age % NationsConfig.getInt(NationsRegistry.WAR_CAPTURE_PROGRESS_REGRESSION_RATE_CFG) == 0){
                   attackOnCapTicks--;
                }
                textColor = Formatting.RED;

@@ -162,7 +162,10 @@ public class CapturePoint {
             this.storedCoins += this.getYield() % 24;
          }
          
-         if(getYield() != 0) getControllingNation().addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_CAP_CFG));
+         if(getYield() != 0){
+            int colonialismLvl = getControllingNation().getBuffLevel(NationsRegistry.COLONIALISM);
+            getControllingNation().addVictoryPoints(NationsConfig.getInt(NationsRegistry.VICTORY_POINTS_CAP_CFG) + colonialismLvl * NationsConfig.getInt(NationsRegistry.COLONIALISM_VICTORY_POINT_INCREASE_CFG));
+         }
          this.updateHolo = true;
       }
    }

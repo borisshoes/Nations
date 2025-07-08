@@ -313,6 +313,9 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> WAR_MINIMUM_CAPTURE_POINT_DIFFERENCE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("warMinimumCapturePointDifference", 12, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
+   public static final NationsConfig.ConfigSetting<?> WAR_CAPTURE_PROGRESS_REGRESSION_RATE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("warCaptureProgressRegressionRate", 5, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
    public static final NationsConfig.ConfigSetting<?> STACK_OVERDAMAGE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("stackOverdamageAmount", 5, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
@@ -360,6 +363,9 @@ public class NationsRegistry {
    
    public static final NationsConfig.ConfigSetting<?> COLONIALISM_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.DoubleConfigValue("colonialismIncrease", 0.2, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
+   
+   public static final NationsConfig.ConfigSetting<?> COLONIALISM_VICTORY_POINT_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("colonialismVictoryPointIncrease", 1, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
    
    public static final NationsConfig.ConfigSetting<?> SCHOLARSHIP_INCREASE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.DoubleConfigValue("scholarshipIncrease", 0.1, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
