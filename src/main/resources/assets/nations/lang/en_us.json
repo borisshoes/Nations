@@ -880,5 +880,7 @@
   "text.nations.world_already_initialized": "The world is already initialized",
   "text.nations.world_not_initialized": "The world is not yet initialized for Nations",
   "text.nations.yield": "Yield",
-  "text.nations.yield_report": "Yield: %s, %s, %s"
+  "text.nations.yield_report": "Yield: %s, %s, %s",
+  "text.nations.nation_cannot_receive_capture_points": "This Nation cannot receive Capture Points",
+  "text.nations.toggled_capture_point_transfers": "Allow Incoming Capture Point Transfers is now set to: %s"
 }

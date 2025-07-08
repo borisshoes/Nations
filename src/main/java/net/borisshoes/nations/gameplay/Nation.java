@@ -87,6 +87,7 @@ public class Nation {
    private final Map<ResourceType,Integer> storedCoins;
    private int bankedResearchCoins;
    private final ArrayList<ItemStack> mailbox;
+   private boolean disableTransfers;
    private ElementHolder hologram;
    private HolderAttachment attachment;
    private int interactCooldown = 0;
@@ -109,6 +110,7 @@ public class Nation {
       this.storedCoins = new HashMap<>();
       this.bankedResearchCoins = 0;
       this.mailbox = new ArrayList<>();
+      this.disableTransfers = false;
       
       for(ResourceType value : ResourceType.values()){
          this.storedCoins.put(value,0);
@@ -118,7 +120,7 @@ public class Nation {
    private Nation(Set<UUID> members, Set<UUID> executors, Set<UUID> leaders, Set<NationChunk> chunks, ChunkPos foundLocation, int foundHeight,
                   String id, String name, DyeColor dyeColor, int textColor, int textColorSub,
                   Map<ResearchTech, Integer> techs, ArrayDeque<ResearchTech> techQueue, int victoryPoints,
-                  Map<ResourceType,Integer> storedCoins, int bankedResearchCoins, ArrayList<ItemStack> mailbox){
+                  Map<ResourceType,Integer> storedCoins, int bankedResearchCoins, ArrayList<ItemStack> mailbox, boolean disableTransfers){
       this.members = members;
       this.executors = executors;
       this.leaders = leaders;
@@ -136,6 +138,7 @@ public class Nation {
       this.storedCoins = storedCoins;
       this.bankedResearchCoins = bankedResearchCoins;
       this.mailbox = mailbox;
+      this.disableTransfers = disableTransfers;
    }
    
    public void tick(ServerWorld serverWorld){
@@ -1095,6 +1098,14 @@ public class Nation {
       return level;
    }
    
+   public boolean canRecieveCapturePoints(){
+      return !disableTransfers;
+   }
+   
+   public void setDisableTransfers(boolean disable){
+      this.disableTransfers = disable;
+   }
+   
    public MutableText getFormattedName(){
       return NationsColors.withColor(Text.literal(name),textColor);
    }
@@ -1307,6 +1318,7 @@ public class Nation {
       compound.putInt("textColorSub",textColorSub);
       compound.putInt("victoryPoints",victoryPoints);
       compound.putInt("bankedResearchCoins",bankedResearchCoins);
+      compound.putBoolean("disableTransfers",disableTransfers);
       return compound;
    }
    
@@ -1378,7 +1390,8 @@ public class Nation {
                compound.getInt("victoryPoints"),
                coins,
                compound.getInt("bankedResearchCoins"),
-               mail
+               mail,
+               compound.getBoolean("disableTransfers")
          );
       }catch(Exception e){
          log(3,e.toString());

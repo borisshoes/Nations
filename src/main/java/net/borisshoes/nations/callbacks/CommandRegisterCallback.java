@@ -175,6 +175,8 @@ public class CommandRegisterCallback {
                   .executes(NationsCommands::leaderboard))
             .then(literal("toggleTrespassAlerts")
                   .executes(NationsCommands::toggleTrespassAlerts))
+            .then(literal("toggleCapturePointTransfers")
+                  .executes(NationsCommands::toggleCapturePointTransfers))
             .then(literal("defend")
                   .then(argument("x", integer())
                         .then(argument("z", integer())

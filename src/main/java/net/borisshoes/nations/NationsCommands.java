@@ -1215,6 +1215,35 @@ public class NationsCommands {
       }
    }
    
+   public static int toggleCapturePointTransfers(CommandContext<ServerCommandSource> ctx){
+      try{
+         ServerCommandSource src = ctx.getSource();
+         if(!src.isExecutedByPlayer()){
+            src.sendError(Text.translatable("text.nations.not_player"));
+            return -1;
+         }
+         ServerPlayerEntity player = src.getPlayer();
+         Nation nation = Nations.getNation(player);
+         if(nation == null){
+            src.sendError(Text.translatable("text.nations.no_player_nation_error"));
+            return -1;
+         }
+         
+         if(!nation.hasPermissions(player)){
+            src.sendError(Text.translatable("text.nations.player_not_executor"));
+            return -1;
+         }
+         
+         nation.setDisableTransfers(nation.canRecieveCapturePoints());
+         src.sendMessage(Text.translatable("text.nations.toggled_capture_point_transfers",String.valueOf(nation.canRecieveCapturePoints())));
+         
+         return 1;
+      }catch(Exception e){
+         log(2,e.toString());
+         return -1;
+      }
+   }
+   
    public static int transferCapturePoint(CommandContext<ServerCommandSource> ctx, String nationId, ChunkSectionPos chunkPos){
       try{
          ServerCommandSource src = ctx.getSource();
@@ -1228,6 +1257,11 @@ public class NationsCommands {
          Nation nation = Nations.getNation(nationId);
          if(nation == null){
             src.sendError(Text.translatable("text.nations.no_nation_error"));
+            return -1;
+         }
+         
+         if(!nation.canRecieveCapturePoints() && !ctx.getSource().hasPermissionLevel(2)){
+            src.sendError(Text.translatable("text.nations.nation_cannot_receive_capture_points"));
             return -1;
          }
          

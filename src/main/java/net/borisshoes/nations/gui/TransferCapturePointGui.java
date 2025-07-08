@@ -83,7 +83,7 @@ public class TransferCapturePointGui extends SimpleGui {
    
    private void transferCallback(Nation nation, ClickType clickType){
       NationChunk chunk = Nations.getChunk(capturePoint.getChunkPos());
-      if(chunk != null && chunk.getControllingNation() != null){
+      if(chunk != null && chunk.getControllingNation() != null && (nation.canRecieveCapturePoints() || player.isCreativeLevelTwoOp())){
          close();
          return;
       }
@@ -100,7 +100,7 @@ public class TransferCapturePointGui extends SimpleGui {
    
    private void build(){
       GuiHelper.outlineGUI(9,6,this,owningNation.getTextColorSub(),Text.empty(),null);
-      List<Nation> nations = Nations.getNations().stream().filter(nation -> !nation.equals(owningNation)).toList();
+      List<Nation> nations = Nations.getNations().stream().filter(nation -> !nation.equals(owningNation) && nation.canRecieveCapturePoints()).toList();
       this.itemList = nations;
       
       Function<Nation, GuiElementBuilder> builder = nation -> {
