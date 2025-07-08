@@ -649,25 +649,42 @@ public class WarManager {
          BlockPos corner1 = (new ChunkPos(pos.x-range,pos.z-range).getBlockPos(15,contestWorld.getBottomY(),15));
          BlockPos corner2 = (new ChunkPos(pos.x+range,pos.z+range).getBlockPos(0,contestWorld.getLogicalHeight(),0));
          Box bounds = new Box(corner1.toCenterPos(),corner2.toCenterPos());
+         Box boundsLeeway = new Box(corner1.toCenterPos(),corner2.toCenterPos()).expand(10);
          
          if(begun){
             ServerPlayerEntity attackerPlayer = server.getPlayerManager().getPlayer(attacker);
             ServerPlayerEntity defenderPlayer = server.getPlayerManager().getPlayer(defender);
             
+            List<UUID> playersLeeway = new ArrayList<>(contestWorld.getPlayers(p -> !p.isSpectator() && !p.isCreative() && p.getBoundingBox().intersects(boundsLeeway)).stream().map(Entity::getUuid).toList());
             List<UUID> players = new ArrayList<>(contestWorld.getPlayers(p -> !p.isSpectator() && !p.isCreative() && p.getBoundingBox().intersects(bounds)).stream().map(Entity::getUuid).toList());
-            if(players.contains(attacker)){
-               players.remove(attacker);
+            if(playersLeeway.contains(attacker)){
+               if(!players.contains(attacker)){
+                  if(attackerPlayer != null){
+                     Vec3d nearest = MiscUtils.closestPointOnBoxSurface(bounds,attackerPlayer.getPos());
+                     Vec3d diff = nearest.subtract(attackerPlayer.getPos());
+                     Vec3d newPos = diff.normalize().multiply(diff.length()+2).add(attackerPlayer.getPos());
+                     attackerPlayer.teleportTo(new TeleportTarget(contestWorld,newPos, Vec3d.ZERO,attackerPlayer.getYaw(),attackerPlayer.getPitch(),TeleportTarget.NO_OP));
+                  }
+               }
             }else if(attackerPlayer != null){ // Defender victory
                attackerPlayer.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,defenderPlayer),attackerPlayer.getHealth()*100);
             }
             
-            if(players.contains(defender)){
-               players.remove(defender);
+            if(playersLeeway.contains(defender)){
+               if(!players.contains(defender)){
+                  if(defenderPlayer != null){
+                     Vec3d nearest = MiscUtils.closestPointOnBoxSurface(bounds,defenderPlayer.getPos());
+                     Vec3d diff = nearest.subtract(defenderPlayer.getPos());
+                     Vec3d newPos = diff.normalize().multiply(diff.length()+2).add(defenderPlayer.getPos());
+                     defenderPlayer.teleportTo(new TeleportTarget(contestWorld,newPos, Vec3d.ZERO,defenderPlayer.getYaw(),defenderPlayer.getPitch(),TeleportTarget.NO_OP));
+                  }
+               }
             }else if(defenderPlayer != null){ // Attacker victory
                defenderPlayer.damage(contestWorld, ArcanaDamageTypes.of(contestWorld,NationsRegistry.CONTEST_DAMAGE,attackerPlayer),defenderPlayer.getHealth()*100);
             }
             
             for(UUID playerId : players){ // Interlopers
+               if(playerId.equals(attacker) || playerId.equals(defender)) continue;
                ServerPlayerEntity player = server.getPlayerManager().getPlayer(playerId);
                if(player == null) continue;
                player.teleportTo(new TeleportTarget(overworld,player.getPos(), Vec3d.ZERO,player.getYaw(),player.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
@@ -677,11 +694,23 @@ public class WarManager {
             
             Vec3d center = capturePoint.getBeaconPos().toCenterPos().add(0,3,0);
             float centerRadius = 5;
+            Formatting textColor = Formatting.GOLD;
+            int particleColor = 0xff9000;
+            float size = 0.5f;
             if(attackerPlayer != null && attackerPlayer.squaredDistanceTo(center) <= centerRadius*centerRadius){
-               if(defenderPlayer == null || !(defenderPlayer.squaredDistanceTo(center) <= centerRadius*centerRadius))
+               if(defenderPlayer == null || !(defenderPlayer.squaredDistanceTo(center) <= centerRadius*centerRadius)){
                   attackOnCapTicks++;
+                  textColor = Formatting.GREEN;
+                  particleColor = 0x00d71e;
+                  size = 0.75f;
+               }
             }else if(attackOnCapTicks > 0){
-               attackOnCapTicks -= Math.min(attackOnCapTicks,5);
+               if(age % 5 == 0){
+                  attackOnCapTicks--;
+               }
+               textColor = Formatting.RED;
+               particleColor = 0xc41717;
+               size = 0.75f;
             }
             
             int capDuration = NationsConfig.getInt(NationsRegistry.WAR_ATTACK_CAPTURE_DURATION_CFG); // seconds
@@ -703,17 +732,25 @@ public class WarManager {
                }
             }
             
+            
+            
             if(attackOnCapTicks > 0){
+               char[] blocks = {'▁', '▂', '▃', '▅', '▆', '▇', '▌'};
                double percentage = (double) attackOnCapTicks / (capDuration * 20.0);
                StringBuilder message = new StringBuilder();
-               for (int i = 0; i < 20; i++) {
-                  if(percentage*20 > i){
-                     message.append("|");
-                  }else{
-                     message.append("¦");
+               int columns = 10;
+               for (int i = 0; i < columns; i++) {
+                  double columnFill = (percentage * columns) - i;
+                  if (columnFill <= 0.0) {
+                     message.append(blocks[0]);
+                  } else if (columnFill >= 1.0) {
+                     message.append(blocks[blocks.length - 1]);
+                  } else {
+                     int idx = (int) Math.round(columnFill * (blocks.length - 1));
+                     message.append(blocks[idx]);
                   }
                }
-               Text captureText = Text.translatable("text.nations.capture_progress",Text.literal(message.toString()).formatted(Formatting.GOLD)).formatted(Formatting.BOLD,Formatting.RED);
+               Text captureText = Text.translatable("text.nations.capture_progress",Text.literal(message.toString()).formatted(textColor)).formatted(Formatting.BOLD,textColor);
                if(attackerPlayer != null){
                   attackerPlayer.sendMessage(captureText,true);
                }
@@ -721,8 +758,8 @@ public class WarManager {
                   defenderPlayer.sendMessage(captureText,true);
                }
                
-               double theta = Math.PI * 2 * age / 200;
-               ParticleEffectUtils.sphere(contestWorld,null,center,new DustParticleEffect(0xee6600,0.5f),centerRadius,(int)(5*centerRadius*centerRadius),1,0.1,1,theta);
+               double theta = Math.PI * 2 * attackOnCapTicks / 200;
+               ParticleEffectUtils.sphere(contestWorld,null,center,new DustParticleEffect(particleColor,size),centerRadius,(int)(5*centerRadius*centerRadius),1,0.1,1,theta);
             }
             
             bossBar.setName(getBossbarText());

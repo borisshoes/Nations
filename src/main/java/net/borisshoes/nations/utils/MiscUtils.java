@@ -23,8 +23,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Pair;
 import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.*;
 import org.joml.Vector2d;
 import org.joml.Vector2i;
 
@@ -35,6 +34,49 @@ import java.util.function.DoubleUnaryOperator;
 public class MiscUtils {
    
    private static final int CHUNK_SIZE = 16;
+   
+   public static Vec3d closestPointOnBoxSurface(Box box, Vec3d p) {
+      double cx = MathHelper.clamp(p.x, box.minX, box.maxX);
+      double cy = MathHelper.clamp(p.y, box.minY, box.maxY);
+      double cz = MathHelper.clamp(p.z, box.minZ, box.maxZ);
+      
+      // If the point is outside on at least one axis, the clamped point is already on the surface
+      if (p.x < box.minX || p.x > box.maxX
+            || p.y < box.minY || p.y > box.maxY
+            || p.z < box.minZ || p.z > box.maxZ) {
+         return new Vec3d(cx, cy, cz);
+      }
+      
+      double dMinX = p.x - box.minX;
+      double dMaxX = box.maxX - p.x;
+      double dMinY = p.y - box.minY;
+      double dMaxY = box.maxY - p.y;
+      double dMinZ = p.z - box.minZ;
+      double dMaxZ = box.maxZ - p.z;
+
+      // Start by assuming the closest face is WEST (−X)
+      double min = dMinX;
+      Direction face = Direction.WEST;
+
+      // Test the other five faces
+      if (dMaxX < min) { min = dMaxX; face = Direction.EAST; }
+      if (dMinY < min) { min = dMinY; face = Direction.DOWN; }
+      if (dMaxY < min) { min = dMaxY; face = Direction.UP; }
+      if (dMinZ < min) { min = dMinZ; face = Direction.NORTH; }
+      if (dMaxZ < min) { min = dMaxZ; face = Direction.SOUTH; }
+
+      // Snap the clamped point onto the chosen face
+      switch (face) {
+         case WEST  -> cx = box.minX;  // −X
+         case EAST  -> cx = box.maxX;  // +X
+         case DOWN  -> cy = box.minY;  // −Y
+         case UP    -> cy = box.maxY;  // +Y
+         case NORTH -> cz = box.minZ;  // −Z
+         case SOUTH -> cz = box.maxZ;  // +Z
+      }
+      
+      return new Vec3d(cx, cy, cz);
+   }
    
    public static boolean isContinuous(List<Vector2i> chunks) {
       if (chunks == null || chunks.isEmpty()) return true;   // nothing to split
