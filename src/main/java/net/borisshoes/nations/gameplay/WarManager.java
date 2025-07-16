@@ -1,7 +1,26 @@
 package net.borisshoes.nations.gameplay;
 
+import net.borisshoes.ancestralarchetypes.AncestralArchetypes;
+import net.borisshoes.ancestralarchetypes.SubArchetype;
+import net.borisshoes.ancestralarchetypes.cca.IArchetypeProfile;
+import net.borisshoes.arcananovum.ArcanaConfig;
+import net.borisshoes.arcananovum.ArcanaNovum;
 import net.borisshoes.arcananovum.ArcanaRegistry;
+import net.borisshoes.arcananovum.achievements.ArcanaAchievements;
+import net.borisshoes.arcananovum.augments.ArcanaAugments;
+import net.borisshoes.arcananovum.callbacks.ItemReturnTimerCallback;
+import net.borisshoes.arcananovum.core.ArcanaItem;
 import net.borisshoes.arcananovum.damage.ArcanaDamageTypes;
+import net.borisshoes.arcananovum.items.*;
+import net.borisshoes.arcananovum.items.arrows.ConcussionArrows;
+import net.borisshoes.arcananovum.items.arrows.EnsnarementArrows;
+import net.borisshoes.arcananovum.items.arrows.ExpulsionArrows;
+import net.borisshoes.arcananovum.items.arrows.GravitonArrows;
+import net.borisshoes.arcananovum.items.charms.CindersCharm;
+import net.borisshoes.arcananovum.items.charms.FelidaeCharm;
+import net.borisshoes.arcananovum.utils.ArcanaItemUtils;
+import net.borisshoes.arcananovum.utils.EnhancedStatUtils;
+import net.borisshoes.arcananovum.utils.SoundUtils;
 import net.borisshoes.arcananovum.utils.SpawnPile;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsConfig;
@@ -14,13 +33,18 @@ import net.borisshoes.nations.utils.ParticleEffectUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.CommandBossBar;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.inventory.SimpleInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.particle.DustParticleEffect;
+import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -462,6 +486,7 @@ public class WarManager {
       }
       Nations.addTickTimerCallback(new GenericTimer(20*5, () -> {
          teardownDuel(capPos,contestWorld);
+         record.returnThings();
       }));
    }
    
@@ -608,9 +633,54 @@ public class WarManager {
       
       for(BlockPos blockPos : BlockPos.iterate(corner1, corner2)){
          BlockState blockState = overworld.getBlockState(blockPos);
-         if(blockState.hasBlockEntity() || blockState.isAir() || blockState.getBlock() == Blocks.RESPAWN_ANCHOR) continue;
+         if(blockState.hasBlockEntity() || blockState.isIn(NationsRegistry.DUEL_NO_COPY_BLOCKS)) continue;
          contestWorld.setBlockState(blockPos,blockState, Block.FORCE_STATE+Block.SKIP_DROPS+Block.REDRAW_ON_MAIN_THREAD);
       }
+   }
+   
+   private static List<ItemStack> removeIllegalThings(ServerPlayerEntity player){
+      StatusEffectInstance res = player.getStatusEffect(StatusEffects.RESISTANCE);
+      if(res != null && res.getAmplifier() > 0){
+         player.removeStatusEffect(StatusEffects.RESISTANCE);
+         player.addStatusEffect(new StatusEffectInstance(res.getEffectType(),res.getDuration(),0,res.isAmbient(),res.shouldShowParticles(),res.shouldShowIcon()));
+      }
+      player.removeStatusEffect(ArcanaRegistry.DEATH_WARD_EFFECT);
+      
+      ArrayList<ItemStack> removedStacks = new ArrayList<>();
+      
+      List<Pair<List<ItemStack>,ItemStack>> allItems = net.borisshoes.arcananovum.utils.MiscUtils.getAllItems(player);
+      for(int i = 0; i < allItems.size(); i++){
+         List<ItemStack> itemList = allItems.get(i).getLeft();
+         ItemStack carrier = allItems.get(i).getRight();
+         boolean changed = false;
+         
+         for(int j = 0; j < itemList.size(); j++){
+            ItemStack item = itemList.get(j);
+            ArcanaItem arcanaItem = ArcanaItemUtils.identifyItem(item);
+            
+            if(arcanaItem instanceof TotemOfVengeance || arcanaItem instanceof SojournerBoots || arcanaItem instanceof GreavesOfGaialtus ||
+                  arcanaItem instanceof NulMemento || arcanaItem instanceof EnsnarementArrows || arcanaItem instanceof ExpulsionArrows ||
+                  arcanaItem instanceof ConcussionArrows || arcanaItem instanceof GravitonArrows
+            ){
+               removedStacks.add(item.copyAndEmpty());
+               changed = true;
+            }
+            
+            if(EnhancedStatUtils.isEnhanced(item) && item.contains(DataComponentTypes.EQUIPPABLE)){
+               removedStacks.add(item.copyAndEmpty());
+               changed = true;
+            }
+         }
+         
+         if(changed && ArcanaItemUtils.identifyItem(carrier) instanceof ArcanistsBelt belt){
+            belt.buildItemLore(carrier, ArcanaNovum.SERVER);
+         }
+         if(changed && ArcanaItemUtils.identifyItem(carrier) instanceof QuiverItem quiver){
+            quiver.buildItemLore(carrier, ArcanaNovum.SERVER);
+         }
+      }
+      
+      return removedStacks;
    }
    
    public static HashSet<Contest> getActiveContests(){
@@ -630,6 +700,12 @@ public class WarManager {
       private Contest proxy;
       private int attackOnCapTicks;
       private CommandBossBar bossBar;
+      private final List<ItemStack> attackerItems = new ArrayList<>();
+      private final List<ItemStack> defenderItems = new ArrayList<>();
+      private SubArchetype attackerArchetype;
+      private SubArchetype defenderArchetype;
+      private ServerPlayerEntity lastOnlineAttacker;
+      private ServerPlayerEntity lastOnlineDefender;
       
       public Contest(CapturePoint capturePoint, UUID attacker, UUID defender){
          this.capturePoint = capturePoint;
@@ -654,6 +730,27 @@ public class WarManager {
          if(begun){
             ServerPlayerEntity attackerPlayer = server.getPlayerManager().getPlayer(attacker);
             ServerPlayerEntity defenderPlayer = server.getPlayerManager().getPlayer(defender);
+            
+            if(attackerPlayer != null){
+               attackerItems.addAll(WarManager.removeIllegalThings(attackerPlayer));
+               IArchetypeProfile archetypeProfile = AncestralArchetypes.profile(attackerPlayer);
+               SubArchetype archetype = archetypeProfile.getSubArchetype();
+               if(archetype != null){
+                  attackerArchetype = archetype;
+                  archetypeProfile.changeArchetype(null);
+               }
+               lastOnlineAttacker = attackerPlayer;
+            }
+            if(defenderPlayer != null){
+               defenderItems.addAll(WarManager.removeIllegalThings(defenderPlayer));
+               IArchetypeProfile archetypeProfile = AncestralArchetypes.profile(defenderPlayer);
+               SubArchetype archetype = archetypeProfile.getSubArchetype();
+               if(archetype != null){
+                  defenderArchetype = archetype;
+                  archetypeProfile.changeArchetype(null);
+               }
+               lastOnlineDefender = defenderPlayer;
+            }
             
             List<UUID> playersLeeway = new ArrayList<>(contestWorld.getPlayers(p -> !p.isSpectator() && !p.isCreative() && p.getBoundingBox().intersects(boundsLeeway)).stream().map(Entity::getUuid).toList());
             List<UUID> players = new ArrayList<>(contestWorld.getPlayers(p -> !p.isSpectator() && !p.isCreative() && p.getBoundingBox().intersects(bounds)).stream().map(Entity::getUuid).toList());
@@ -767,6 +864,23 @@ public class WarManager {
             bossBar.setPercent(1-percentage);
             
             age++;
+         }
+      }
+      
+      public void returnThings(){
+         if(lastOnlineAttacker != null){
+            for(ItemStack attackerItem : attackerItems){
+               ArcanaNovum.addTickTimerCallback(new ItemReturnTimerCallback(attackerItem,lastOnlineAttacker));
+            }
+            IArchetypeProfile attackerProfile = AncestralArchetypes.profile(lastOnlineAttacker);
+            attackerProfile.changeArchetype(attackerArchetype);
+         }
+         if(lastOnlineDefender != null){
+            for(ItemStack defenderItem : defenderItems){
+               ArcanaNovum.addTickTimerCallback(new ItemReturnTimerCallback(defenderItem,lastOnlineDefender));
+            }
+            IArchetypeProfile defenderProfile = AncestralArchetypes.profile(lastOnlineDefender);
+            defenderProfile.changeArchetype(defenderArchetype);
          }
       }
       

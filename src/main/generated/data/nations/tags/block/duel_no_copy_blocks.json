@@ -1,0 +1,13 @@
+{
+  "values": [
+    {
+      "id": "#minecraft:air",
+      "required": false
+    },
+    "minecraft:respawn_anchor",
+    {
+      "id": "#minecraft:beacon_base_blocks",
+      "required": false
+    }
+  ]
+}

@@ -1,7 +1,6 @@
 package net.borisshoes.nations.mixins;
 
 import net.borisshoes.arcananovum.items.TelescopingBeacon;
-import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.land.NationsLand;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.server.network.ServerPlayerEntity;

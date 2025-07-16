@@ -72,6 +72,7 @@ public class NationsRegistry {
    
    public static final TagKey<Block> INFLUENCE_PROTECTED_BLOCKS = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID,"influence_protected_blocks"));
    public static final TagKey<Block> CLAIM_PROTECTED_BLOCKS = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID,"claim_protected_blocks"));
+   public static final TagKey<Block> DUEL_NO_COPY_BLOCKS = TagKey.of(RegistryKeys.BLOCK, Identifier.of(MOD_ID,"duel_no_copy_blocks"));
    
    public static final RegistryKey<MessageType> GLOBAL_MESSAGE = RegistryKey.of(RegistryKeys.MESSAGE_TYPE, Identifier.of(MOD_ID,"global_message"));
    public static final RegistryKey<MessageType> LOCAL_MESSAGE = RegistryKey.of(RegistryKeys.MESSAGE_TYPE, Identifier.of(MOD_ID,"local_message"));
@@ -312,6 +313,9 @@ public class NationsRegistry {
    
    public static final NationsConfig.ConfigSetting<?> WAR_MINIMUM_CAPTURE_POINT_DIFFERENCE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("warMinimumCapturePointDifference", 12, new ConfigUtils.IntegerConfigValue.IntLimits(0))));
+   
+   public static final NationsConfig.ConfigSetting<?> WAR_MAXIMUM_BLOCKADE_PERCENTAGE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.DoubleConfigValue("warMaxBlockadePercentage", 0.75, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0,1.0))));
    
    public static final NationsConfig.ConfigSetting<?> WAR_CAPTURE_PROGRESS_REGRESSION_RATE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("warCaptureProgressRegressionRate", 5, new ConfigUtils.IntegerConfigValue.IntLimits(1))));

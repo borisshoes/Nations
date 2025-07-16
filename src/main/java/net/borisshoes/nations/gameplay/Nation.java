@@ -283,6 +283,13 @@ public class Nation {
          }
          returned.put(value, (int)coin);
       }
+      
+      List<CapturePoint> caps = getCapturePoints().stream().filter(cap -> this.equals(cap.getControllingNation())).toList();
+      double blockaded = caps.stream().filter(cap -> cap.getOutputModifier() < 1E-7).count();
+      double maxBlockadePercentage = NationsConfig.getDouble(NationsRegistry.WAR_MAXIMUM_BLOCKADE_PERCENTAGE_CFG);
+      double blockadePercent = maxBlockadePercentage * (blockaded / (double) caps.size());
+      returned.forEach((key, value) -> returned.put(key, (int) ((1.0-blockadePercent)*value)));
+      
       return returned;
    }
    

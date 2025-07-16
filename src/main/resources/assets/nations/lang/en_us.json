@@ -882,5 +882,7 @@
   "text.nations.yield": "Yield",
   "text.nations.yield_report": "Yield: %s, %s, %s",
   "text.nations.nation_cannot_receive_capture_points": "This Nation cannot receive Capture Points",
-  "text.nations.toggled_capture_point_transfers": "Allow Incoming Capture Point Transfers is now set to: %s"
+  "text.nations.toggled_capture_point_transfers": "Allow Incoming Capture Point Transfers is now set to: %s",
+  "command.nations.war_max_blockade_percentage.getter_setter": "Maximum Blockaded Yield Percentage: %s",
+  "command.nations.war_max_blockade_percentage.comment": "The max percentage of a Nation's territory coin yield that can be blockaded from attacking annexed Capture Points"
 }

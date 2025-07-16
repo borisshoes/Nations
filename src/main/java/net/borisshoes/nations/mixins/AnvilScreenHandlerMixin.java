@@ -1,6 +1,7 @@
 package net.borisshoes.nations.mixins;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import net.borisshoes.arcananovum.blocks.forge.TwilightAnvilBlockEntity;
 import net.borisshoes.arcananovum.utils.ArcanaItemUtils;
 import net.borisshoes.nations.Nations;
 import net.borisshoes.nations.NationsRegistry;
@@ -36,20 +37,38 @@ public class AnvilScreenHandlerMixin {
       ItemStack stack = accessor.getOutput().getStack(0);
       PlayerEntity player = accessor.getPlayer();
       
-      if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem())) return;
+      boolean isArcane = ArcanaItemUtils.isArcane(stack);
+      if(!NationsRegistry.LOCKED_ITEMS.containsKey(stack.getItem()) && !isArcane) return;
       if(!(player instanceof ServerPlayerEntity serverPlayer)) return;
-      if(ArcanaItemUtils.isArcane(stack)) return;
       Nation nation = Nations.getNation(serverPlayer);
       if(nation == null) return;
       boolean canCraft = nation.canCraft(stack.getItem());
       if(!canCraft){
          accessor.getOutput().setStack(0,ItemStack.EMPTY);
       }else{
-         ItemEnchantmentsComponent enchants = stack.getEnchantments();
-         for(RegistryEntry<Enchantment> enchantment : enchants.getEnchantments()){
-            if(!nation.canEnchant(enchantment.getKey().get(),enchants.getLevel(enchantment))){
+         if(isArcane){
+            if(!nation.canCraft(ArcanaItemUtils.identifyItem(stack))){
                accessor.getOutput().setStack(0,ItemStack.EMPTY);
                return;
+            }
+            ItemStack arcaneStack = ArcanaItemUtils.isArcane(accessor.getInput().getStack(0)) ? accessor.getInput().getStack(0) : accessor.getInput().getStack(1);
+            ItemEnchantmentsComponent startingEnchants = arcaneStack.getEnchantments();
+            ItemEnchantmentsComponent endingEnchantments = stack.getEnchantments();
+            
+            for(RegistryEntry<Enchantment> enchantment : endingEnchantments.getEnchantments()){
+               if(startingEnchants.getLevel(enchantment) >= endingEnchantments.getLevel(enchantment)) continue;
+               if(!nation.canEnchant(enchantment.getKey().get(),endingEnchantments.getLevel(enchantment))){
+                  accessor.getOutput().setStack(0,ItemStack.EMPTY);
+                  return;
+               }
+            }
+         }else{
+            ItemEnchantmentsComponent enchants = stack.getEnchantments();
+            for(RegistryEntry<Enchantment> enchantment : enchants.getEnchantments()){
+               if(!nation.canEnchant(enchantment.getKey().get(),enchants.getLevel(enchantment))){
+                  accessor.getOutput().setStack(0,ItemStack.EMPTY);
+                  return;
+               }
             }
          }
       }

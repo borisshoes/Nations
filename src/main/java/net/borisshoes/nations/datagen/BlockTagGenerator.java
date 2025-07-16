@@ -8,6 +8,7 @@ import net.minecraft.item.*;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.tag.BlockTags;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -31,6 +32,12 @@ public class BlockTagGenerator  extends FabricTagProvider<Block> {
             claimBlockBuilder.add(block);
          }
       });
+      
+      getOrCreateTagBuilder(NationsRegistry.DUEL_NO_COPY_BLOCKS)
+            .addOptionalTag(BlockTags.AIR)
+            .add(Blocks.RESPAWN_ANCHOR)
+            .addOptionalTag(BlockTags.BEACON_BASE_BLOCKS)
+      ;
    }
    
    @Override

@@ -17,4 +17,7 @@ public interface ForgingScreenHandlerAccessor {
    
    @Accessor("output")
    CraftingResultInventory getOutput();
+   
+   @Accessor("input")
+   Inventory getInput();
 }
