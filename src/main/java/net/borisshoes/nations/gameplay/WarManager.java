@@ -504,6 +504,8 @@ public class WarManager {
       setupDuel(server,cap);
       
       sendPrepTeleportMessage(attacker,defender);
+      record.removeAttackerThings(attacker);
+      record.removeDefenderThings(defender);
       
       Nations.addTickTimerCallback(new GenericTimer(20*11, () -> {
          ChunkPos corner1 = new ChunkPos(capPos.x-DUEL_RANGE,capPos.z-DUEL_RANGE);
@@ -716,6 +718,26 @@ public class WarManager {
          this.proxy = null;
       }
       
+      public void removeAttackerThings(ServerPlayerEntity attackerPlayer){
+         attackerItems.addAll(WarManager.removeIllegalThings(attackerPlayer));
+         IArchetypeProfile archetypeProfile = AncestralArchetypes.profile(attackerPlayer);
+         SubArchetype archetype = archetypeProfile.getSubArchetype();
+         if(archetype != null){
+            attackerArchetype = archetype;
+            archetypeProfile.changeArchetype(null);
+         }
+      }
+      
+      public void removeDefenderThings(ServerPlayerEntity defenderPlayer){
+         defenderItems.addAll(WarManager.removeIllegalThings(defenderPlayer));
+         IArchetypeProfile archetypeProfile = AncestralArchetypes.profile(defenderPlayer);
+         SubArchetype archetype = archetypeProfile.getSubArchetype();
+         if(archetype != null){
+            defenderArchetype = archetype;
+            archetypeProfile.changeArchetype(null);
+         }
+      }
+      
       public void tick(MinecraftServer server){
          if(proxy != null) return;
          ServerWorld contestWorld = server.getWorld(NationsRegistry.CONTEST_DIM);
@@ -732,24 +754,12 @@ public class WarManager {
             ServerPlayerEntity defenderPlayer = server.getPlayerManager().getPlayer(defender);
             
             if(attackerPlayer != null){
-               attackerItems.addAll(WarManager.removeIllegalThings(attackerPlayer));
-               IArchetypeProfile archetypeProfile = AncestralArchetypes.profile(attackerPlayer);
-               SubArchetype archetype = archetypeProfile.getSubArchetype();
-               if(archetype != null){
-                  attackerArchetype = archetype;
-                  archetypeProfile.changeArchetype(null);
-               }
                lastOnlineAttacker = attackerPlayer;
+               removeAttackerThings(attackerPlayer);
             }
             if(defenderPlayer != null){
-               defenderItems.addAll(WarManager.removeIllegalThings(defenderPlayer));
-               IArchetypeProfile archetypeProfile = AncestralArchetypes.profile(defenderPlayer);
-               SubArchetype archetype = archetypeProfile.getSubArchetype();
-               if(archetype != null){
-                  defenderArchetype = archetype;
-                  archetypeProfile.changeArchetype(null);
-               }
                lastOnlineDefender = defenderPlayer;
+               removeDefenderThings(defenderPlayer);
             }
             
             List<UUID> playersLeeway = new ArrayList<>(contestWorld.getPlayers(p -> !p.isSpectator() && !p.isCreative() && p.getBoundingBox().intersects(boundsLeeway)).stream().map(Entity::getUuid).toList());

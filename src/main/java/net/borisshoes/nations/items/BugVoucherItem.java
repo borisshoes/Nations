@@ -47,21 +47,22 @@ public class BugVoucherItem extends Item implements PolymerItem {
    public static HashMap<ItemStack,Integer> loot = new HashMap<>();
    
    public static void fillLoot(MinecraftServer server){
-      loot.put(new ItemStack(ArchetypeRegistry.CHANGE_ITEM,1),250);
-      loot.put(new ItemStack(ArchetypeRegistry.CHANGE_ITEM,2),100);
-      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,1),250);
-      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,3),150);
-      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,5),100);
-      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,1),250);
-      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,3),150);
-      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,5),100);
-      loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,1),500);
-      loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,3),350);
-      loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,5),250);
-      loot.put(VictoryPointItem.getWithValue(250),250);
-      loot.put(VictoryPointItem.getWithValue(500),100);
-      loot.put(VictoryPointItem.getWithValue(750),25);
-      loot.put(VictoryPointItem.getWithValue(1000),10);
+      loot.put(new ItemStack(ArchetypeRegistry.CHANGE_ITEM,1),400);
+      loot.put(new ItemStack(ArchetypeRegistry.CHANGE_ITEM,2),250);
+      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,1),150);
+      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,3),70);
+      loot.put(new ItemStack(NationsRegistry.RESEARCH_BULLION_ITEM,5),35);
+      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,1),150);
+      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,3),70);
+      loot.put(new ItemStack(NationsRegistry.GROWTH_BULLION_ITEM,5),35);
+      loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,1),150);
+      loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,3),70);
+      loot.put(new ItemStack(NationsRegistry.MATERIAL_BULLION_ITEM,5),35);
+      loot.put(VictoryPointItem.getWithValue(100),100);
+      loot.put(VictoryPointItem.getWithValue(250),50);
+      loot.put(VictoryPointItem.getWithValue(500),25);
+      loot.put(VictoryPointItem.getWithValue(750),10);
+      loot.put(VictoryPointItem.getWithValue(1000),5);
       loot.put(ArcanaRegistry.MUNDANE_CATALYST.getPrefItem(),150);
       loot.put(ArcanaRegistry.EMPOWERED_CATALYST.getPrefItem(),75);
       loot.put(ArcanaRegistry.EXOTIC_CATALYST.getPrefItem(),35);
@@ -96,8 +97,8 @@ public class BugVoucherItem extends Item implements PolymerItem {
       loot.put(quarterStick,500);
       
       // 8 13 4
-      String[] animalIds = {"minecraft:pig","minecraft:cow","minecraft:sheep","minecraft:rabbit","minecraft:chicken","minecraft:squid","minecraft:bee","minecraft:mooshroom"};
-      String[] mobIds = {"minecraft:zombie","minecraft:skeleton","minecraft:spider","minecraft:creeper","minecraft:stray","minecraft:bogged","minecraft:drowned","minecraft:witch","minecraft:pillager","minecraft:zombified_piglin","minecraft:vindicator","minecraft:guardian","minecraft:elder_guardian"};
+      String[] animalIds = {"minecraft:pig","minecraft:cow","minecraft:sheep","minecraft:rabbit","minecraft:chicken","minecraft:squid","minecraft:bee","minecraft:mooshroom","minecraft:glow_squid","minecraft:armadillo"};
+      String[] mobIds = {"minecraft:zombie","minecraft:skeleton","minecraft:spider","minecraft:creeper","minecraft:stray","minecraft:bogged","minecraft:drowned","minecraft:witch","minecraft:breeze","minecraft:pillager","minecraft:zombified_piglin","minecraft:vindicator","minecraft:guardian","minecraft:elder_guardian"};
       String[] rareMobIds = {"minecraft:enderman","minecraft:blaze","minecraft:wither_skeleton","minecraft:evoker"};
       String compoundStr = "{Delay:0s,MaxNearbyEntities:25s,MaxSpawnDelay:400s,MinSpawnDelay:200s,RequiredPlayerRange:25s,SpawnCount:4s,SpawnData:{entity:{id:\"%s\"}},SpawnPotentials:[],SpawnRange:4s,id:\"minecraft:mob_spawner\"}";
       
@@ -106,7 +107,7 @@ public class BugVoucherItem extends Item implements PolymerItem {
             ItemStack spawner = new ItemStack(Items.SPAWNER);
             NbtCompound compound = StringNbtReader.parse(compoundStr.replace("%s",animalId));
             spawner.set(DataComponentTypes.BLOCK_ENTITY_DATA, NbtComponent.of(compound));
-            loot.put(spawner,65);
+            loot.put(spawner,100);
          }catch(CommandSyntaxException e){
             log(3,"Error Parsing "+animalId+" Mob Spawner for Voucher Loot");
          }
@@ -117,7 +118,7 @@ public class BugVoucherItem extends Item implements PolymerItem {
             ItemStack spawner = new ItemStack(Items.SPAWNER);
             NbtCompound compound = StringNbtReader.parse(compoundStr.replace("%s",mobId));
             spawner.set(DataComponentTypes.BLOCK_ENTITY_DATA, NbtComponent.of(compound));
-            loot.put(spawner,20);
+            loot.put(spawner,50);
          }catch(CommandSyntaxException e){
             log(3,"Error Parsing "+mobId+" Mob Spawner for Voucher Loot");
          }
@@ -128,7 +129,7 @@ public class BugVoucherItem extends Item implements PolymerItem {
             ItemStack spawner = new ItemStack(Items.SPAWNER);
             NbtCompound compound = StringNbtReader.parse(compoundStr.replace("%s",rareMobId));
             spawner.set(DataComponentTypes.BLOCK_ENTITY_DATA, NbtComponent.of(compound));
-            loot.put(spawner,15);
+            loot.put(spawner,35);
          }catch(CommandSyntaxException e){
             log(3,"Error Parsing "+rareMobId+" Mob Spawner for Voucher Loot");
          }
@@ -148,8 +149,8 @@ public class BugVoucherItem extends Item implements PolymerItem {
 //            coins += entry.getValue() * entry.getKey().getCount();
 //         }
 //      }
-//      double vpCount = vp / sum;
-//      double coinCount = coins / sum;
+//      double vpCount = 3 * vp / sum;
+//      double coinCount = 3 * coins / sum;
 //      System.out.println("VP: "+vpCount);
 //      System.out.println("Coins: "+coinCount);
    }
