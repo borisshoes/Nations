@@ -92,6 +92,7 @@ public class Nation {
    private HolderAttachment attachment;
    private int interactCooldown = 0;
    private boolean updateHolo = false;
+   private Set<ResearchTech> completedTechs = new HashSet<>();
    
    public Nation(String id, String name){
       this.members = new HashSet<>();
@@ -139,6 +140,7 @@ public class Nation {
       this.bankedResearchCoins = bankedResearchCoins;
       this.mailbox = mailbox;
       this.disableTransfers = disableTransfers;
+      updateCompletedTechs();
    }
    
    public void tick(ServerWorld serverWorld){
@@ -188,6 +190,7 @@ public class Nation {
                }
                bankedResearchCoins -= bankConsume;
                techs.put(activeTech,progress+consumed);
+               updateCompletedTechs();
                
                if(consumed == 0){
                   MutableText warning = Text.translatable("text.nations.no_research_budget").formatted(Formatting.BOLD,Formatting.RED);
@@ -237,6 +240,7 @@ public class Nation {
                }
                bankedResearchCoins -= bankConsume;
                techs.put(activeTech,progress+consumed);
+               updateCompletedTechs();
                
                if(consumed == remaining){
                   onTechComplete(activeTech);
@@ -752,13 +756,17 @@ public class Nation {
    }
    
    public List<ResearchTech> getCompletedTechs(){
-      List<ResearchTech> completed = new ArrayList<>();
+      return completedTechs.stream().toList();
+   }
+   
+   public void updateCompletedTechs(){
       techs.forEach((tech, progress) -> {
          if(progress >= tech.getCost()){
-            completed.add(tech);
+            completedTechs.add(tech);
+         }else{
+            completedTechs.remove(tech);
          }
       });
-      return completed;
    }
    
    public boolean hasCompletedTech(RegistryKey<ResearchTech> techKey){
@@ -1072,8 +1080,10 @@ public class Nation {
                removeTech(postreq, true);
             }
          }
+         updateCompletedTechs();
          return true;
       }else{
+         updateCompletedTechs();
          return false;
       }
    }
@@ -1091,6 +1101,7 @@ public class Nation {
       }
       
       techs.put(newTech,newTech.getCost());
+      updateCompletedTechs();
       onTechComplete(newTech);
       return true;
    }

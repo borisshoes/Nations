@@ -121,7 +121,7 @@ public class NationsCommands {
          List<NationChunk> needsProcessing = new ArrayList<>();
          long now = System.currentTimeMillis();
          for(NationChunk chunk : nationsData.getChunks()){
-            if(now - chunk.getLastYieldUpdate() > 3600000 || chunk.getYield().equals(new ImmutableTriple<>(0.0,0.0,0.0))){
+            if(now - chunk.getLastYieldUpdate() > Nations.CHUNK_CACHE_LIFETIME * 60000L || chunk.getYield().equals(new ImmutableTriple<>(0.0,0.0,0.0))){
                needsProcessing.add(chunk);
             }else{
                available.add(chunk);
@@ -1604,7 +1604,7 @@ public class NationsCommands {
          List<NationChunk> needsProcessing = new ArrayList<>();
          long now = System.currentTimeMillis();
          for(NationChunk chunk : Nations.getChunks()){
-            if(now - chunk.getLastYieldUpdate() > 3600000 || chunk.getYield().equals(new ImmutableTriple<>(0.0,0.0,0.0))){
+            if(now - chunk.getLastYieldUpdate() > Nations.CHUNK_CACHE_LIFETIME * 60000L || chunk.getYield().equals(new ImmutableTriple<>(0.0,0.0,0.0))){
                needsProcessing.add(chunk);
             }else{
                available.add(chunk);

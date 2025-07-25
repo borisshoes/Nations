@@ -584,9 +584,9 @@ public class NationsLand {
    public static BlockPos moveInBounds(RegistryKey<World> world, BlockPos pos){
       int border;
       if (world.equals(ServerWorld.OVERWORLD)) {
-         border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
+         border = Nations.OVERWORLD_BORDER;
       } else if (world.equals(ServerWorld.NETHER)) {
-         border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_NETHER_CFG);
+         border = NETHER_BORDER;
       } else {
          return pos;
       }
@@ -606,8 +606,8 @@ public class NationsLand {
    }
    
    public static boolean isOutOfBounds(RegistryKey<World> world, BlockPos pos){
-      int overworldBorder = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
-      int netherBorder = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_NETHER_CFG);
+      int overworldBorder = Nations.OVERWORLD_BORDER;
+      int netherBorder = Nations.NETHER_BORDER;
       if(world.equals(ServerWorld.OVERWORLD)){
          return Math.max(Math.abs(pos.getX()), Math.abs(pos.getZ())) > (overworldBorder * 16);
       }else if(world.equals(ServerWorld.NETHER)){

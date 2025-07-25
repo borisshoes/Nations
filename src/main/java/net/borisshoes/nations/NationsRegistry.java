@@ -350,6 +350,9 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> CHUNK_CACHE_UPDATES_PER_MINUTE_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.DoubleConfigValue("chunkCacheUpdatesPerMinute", 100.0, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
    
+   public static final NationsConfig.ConfigSetting<?> CHUNK_CACHE_LIFETIME_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("chunkCacheLifetime", 300, new ConfigUtils.IntegerConfigValue.IntLimits(1))));
+   
    public static final NationsConfig.ConfigSetting<?> MANIFEST_DESTINY_REDUCTION_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.DoubleConfigValue("manifestDestinyReduction", 0.1, new ConfigUtils.DoubleConfigValue.DoubleLimits(0.0))));
    

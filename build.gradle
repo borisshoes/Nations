@@ -75,7 +75,7 @@ dependencies {
     modImplementation include("org.ladysnake.cardinal-components-api:cardinal-components-world:${project.cca_version}")
 
     modImplementation("com.github.borisshoes:ArcanaNovum:${project.arcana_version}")
-    modImplementation("com.github.borisshoes:ancestralarchetypes:${project.archetypes_version}")
+    modImplementation("com.github.borisshoes:ancestralarchetypes:v${project.archetypes_version}")
     modImplementation("curse.maven:dynmap-${project.dynmap_version}")
 }
 

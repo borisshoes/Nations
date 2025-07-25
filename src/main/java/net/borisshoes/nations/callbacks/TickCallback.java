@@ -64,6 +64,11 @@ public class TickCallback {
          // Tick Timer Callbacks
          SERVER_TIMER_CALLBACKS.removeIf(tickTimers(server)::contains);
          
+         if(server.getTicks() % 20 == 0){
+            Nations.OVERWORLD_BORDER = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
+            Nations.NETHER_BORDER = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_NETHER_CFG);
+            Nations.CHUNK_CACHE_LIFETIME = NationsConfig.getInt(NationsRegistry.CHUNK_CACHE_LIFETIME_CFG);
+         }
          
          for(ServerPlayerEntity player : server.getPlayerManager().getPlayerList()){
             INationsProfileComponent profile = Nations.getPlayer(player);
@@ -74,9 +79,9 @@ public class TickCallback {
                float largestPos = (float) Math.max(Math.abs(pos.x), Math.abs(pos.z));
                int border = Integer.MAX_VALUE;
                if(player.getServerWorld().getRegistryKey().equals(ServerWorld.OVERWORLD)){
-                  border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG) * 16;
+                  border = Nations.OVERWORLD_BORDER * 16;
                }else if(player.getServerWorld().getRegistryKey().equals(ServerWorld.NETHER)){
-                  border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_NETHER_CFG) * 16;
+                  border = Nations.NETHER_BORDER * 16;
                }
                
                float dist = largestPos - border;

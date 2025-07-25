@@ -69,10 +69,16 @@ public class Nations implements ModInitializer {
    public static int DEBUG_VALUE = 0;
    public static NetherRift LAST_RIFT;
    public static boolean SHUTTING_DOWN = false;
+   public static int OVERWORLD_BORDER = 0;
+   public static int NETHER_BORDER = 0;
+   public static int CHUNK_CACHE_LIFETIME = 0;
    
    @Override
    public void onInitialize(){
       CONFIG = new ConfigUtils(FabricLoader.getInstance().getConfigDir().resolve(CONFIG_NAME).toFile(), LOGGER, NationsRegistry.CONFIG_SETTINGS.stream().map(NationsConfig.ConfigSetting::makeConfigValue).collect(Collectors.toCollection(HashSet::new)));
+      OVERWORLD_BORDER = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
+      NETHER_BORDER = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_NETHER_CFG);
+      CHUNK_CACHE_LIFETIME = NationsConfig.getInt(NationsRegistry.CHUNK_CACHE_LIFETIME_CFG);
       NationsRegistry.initialize();
       
       CommandRegistrationCallback.EVENT.register(CommandRegisterCallback::registerCommands);

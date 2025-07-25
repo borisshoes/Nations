@@ -37,6 +37,7 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.CommandBossBar;
+import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerInventory;
@@ -44,6 +45,7 @@ import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.particle.DustParticleEffect;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -506,6 +508,9 @@ public class WarManager {
       sendPrepTeleportMessage(attacker,defender);
       record.removeAttackerThings(attacker);
       record.removeDefenderThings(defender);
+      StatusEffectInstance invuln = new StatusEffectInstance(StatusEffects.RESISTANCE,20*12,4,true,false);
+      attacker.addStatusEffect(invuln);
+      defender.addStatusEffect(invuln);
       
       Nations.addTickTimerCallback(new GenericTimer(20*11, () -> {
          ChunkPos corner1 = new ChunkPos(capPos.x-DUEL_RANGE,capPos.z-DUEL_RANGE);
@@ -517,10 +522,22 @@ public class WarManager {
          int y2 = SpawnPile.getSurfaceY(contestWorld,contestWorld.getLogicalHeight()-5,pos2.getX(),pos2.getZ());
          Vec3d attackPos = attacker.getRandom().nextBoolean() ? pos1.toCenterPos().add(0,y1,0) : pos2.toCenterPos().add(0,y2,0);
          
+         attacker.setHealth(attacker.getMaxHealth());
+         for(StatusEffectInstance statusEffect : new ArrayList<>(attacker.getStatusEffects())){
+            if(statusEffect.getEffectType().value().getCategory() == StatusEffectCategory.HARMFUL){
+               attacker.removeStatusEffect(statusEffect.getEffectType());
+            }
+         }
          attacker.teleportTo(new TeleportTarget(contestWorld,attackPos, Vec3d.ZERO,attacker.getYaw(),attacker.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
          attacker.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
          ParticleEffectUtils.netherRiftTeleport(contestWorld,attacker.getPos(),0);
          
+         defender.setHealth(defender.getMaxHealth());
+         for(StatusEffectInstance statusEffect : new ArrayList<>(defender.getStatusEffects())){
+            if(statusEffect.getEffectType().value().getCategory() == StatusEffectCategory.HARMFUL){
+               defender.removeStatusEffect(statusEffect.getEffectType());
+            }
+         }
          defender.teleportTo(new TeleportTarget(contestWorld,defenderPos, Vec3d.ZERO,defender.getYaw(),defender.getPitch(),TeleportTarget.SEND_TRAVEL_THROUGH_PORTAL_PACKET));
          defender.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL, SoundCategory.MASTER, 0.5f, 1.2f);
          ParticleEffectUtils.netherRiftTeleport(contestWorld,defender.getPos(),0);
@@ -882,15 +899,17 @@ public class WarManager {
             for(ItemStack attackerItem : attackerItems){
                ArcanaNovum.addTickTimerCallback(new ItemReturnTimerCallback(attackerItem,lastOnlineAttacker));
             }
-            IArchetypeProfile attackerProfile = AncestralArchetypes.profile(lastOnlineAttacker);
+            IArchetypeProfile attackerProfile = AncestralArchetypes.getPlayerOrOffline(attacker);
             attackerProfile.changeArchetype(attackerArchetype);
          }
          if(lastOnlineDefender != null){
             for(ItemStack defenderItem : defenderItems){
                ArcanaNovum.addTickTimerCallback(new ItemReturnTimerCallback(defenderItem,lastOnlineDefender));
             }
-            IArchetypeProfile defenderProfile = AncestralArchetypes.profile(lastOnlineDefender);
-            defenderProfile.changeArchetype(defenderArchetype);
+            Nations.addTickTimerCallback(new GenericTimer(100, () -> {
+               IArchetypeProfile defenderProfile = AncestralArchetypes.getPlayerOrOffline(defender);
+               defenderProfile.changeArchetype(defenderArchetype);
+            }));
          }
       }
       

@@ -30,6 +30,7 @@ public class NationsDataComponent implements INationsDataComponent {
    private final HashMap<String, Nation> nations = new HashMap<>();
    private final Set<CapturePoint> capturePoints = new HashSet<>();
    private final HashMap<ChunkPos, NationChunk> nationChunks = new HashMap<>();
+   private final ArrayList<NationChunk> chunkList = new ArrayList<>();
    
    private final HashMap<UUID, UUID> killOnRelog = new HashMap<>();
    
@@ -43,7 +44,9 @@ public class NationsDataComponent implements INationsDataComponent {
       nations.clear();
       capturePoints.clear();
       nationChunks.clear();
+      chunkList.clear();
       capturePoints.addAll(caps);
+      chunkList.addAll(chunks);
       chunks.forEach(chunk -> nationChunks.put(chunk.getPos(),chunk));
       this.worldInitialized = true;
    }
@@ -140,7 +143,7 @@ public class NationsDataComponent implements INationsDataComponent {
    
    @Override
    public List<NationChunk> getChunks(){
-      return nationChunks.values().stream().toList();
+      return chunkList;
    }
    
    @Override
@@ -173,11 +176,12 @@ public class NationsDataComponent implements INationsDataComponent {
       nations.clear();
       capturePoints.clear();
       nationChunks.clear();
+      chunkList.clear();
       killOnRelog.clear();
       
       NbtList nationList = nbtCompound.getList("nations", NbtElement.COMPOUND_TYPE);
       NbtList capsList = nbtCompound.getList("capturePoints", NbtElement.COMPOUND_TYPE);
-      NbtList chunkList = nbtCompound.getList("chunks", NbtElement.COMPOUND_TYPE);
+      NbtList nChunkList = nbtCompound.getList("chunks", NbtElement.COMPOUND_TYPE);
       NbtCompound killComp = nbtCompound.getCompound("killOnRelog");
       worldInitialized = nbtCompound.getBoolean("initialized");
       if(nbtCompound.contains("nextWar")) nextWar = nbtCompound.getLong("nextWar");
@@ -195,10 +199,13 @@ public class NationsDataComponent implements INationsDataComponent {
          }
       }
       
-      for(NbtElement e : chunkList){
+      for(NbtElement e : nChunkList){
          NbtCompound chunkComp = (NbtCompound) e;
          NationChunk chunk = NationChunk.loadFromNbt(chunkComp);
-         if(chunk != null) nationChunks.put(chunk.getPos(),chunk);
+         if(chunk != null){
+            chunkList.add(chunk);
+            nationChunks.put(chunk.getPos(), chunk);
+         }
       }
       
       for(NbtElement e : nationList){
@@ -213,17 +220,17 @@ public class NationsDataComponent implements INationsDataComponent {
    public void writeToNbt(NbtCompound nbtCompound, RegistryWrapper.WrapperLookup wrapperLookup){
       NbtList nationList = new NbtList();
       NbtList capsList = new NbtList();
-      NbtList chunkList = new NbtList();
+      NbtList nChunkList = new NbtList();
       NbtCompound killComp = new NbtCompound();
       
       nationList.addAll(nations.values().stream().map(nation -> nation.saveToNbt(new NbtCompound(), wrapperLookup)).collect(Collectors.toSet()));
       capsList.addAll(capturePoints.stream().map(capturePoint -> capturePoint.saveToNbt(new NbtCompound())).collect(Collectors.toSet()));
-      chunkList.addAll(nationChunks.values().stream().map(nationChunk -> nationChunk.saveToNbt(new NbtCompound())).collect(Collectors.toSet()));
+      nChunkList.addAll(chunkList.stream().map(nationChunk -> nationChunk.saveToNbt(new NbtCompound())).collect(Collectors.toSet()));
       killOnRelog.forEach((player, killer) -> killComp.putString(player.toString(),killer.toString()));
       
       nbtCompound.put("nations",nationList);
       nbtCompound.put("capturePoints",capsList);
-      nbtCompound.put("chunks",chunkList);
+      nbtCompound.put("chunks",nChunkList);
       nbtCompound.put("riftData",riftData);
       nbtCompound.putBoolean("initialized",worldInitialized);
       nbtCompound.putLong("nextWar",nextWar);

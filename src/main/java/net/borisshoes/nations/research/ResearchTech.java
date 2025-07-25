@@ -246,4 +246,16 @@ public class ResearchTech {
       }
       return new ItemStack(Items.LAPIS_LAZULI);
    }
+   
+   @Override
+   public boolean equals(Object o){
+      if(this == o) return true;
+      if(!(o instanceof ResearchTech that)) return false;
+      return Objects.equals(key, that.key);
+   }
+   
+   @Override
+   public int hashCode(){
+      return Objects.hashCode(key);
+   }
 }

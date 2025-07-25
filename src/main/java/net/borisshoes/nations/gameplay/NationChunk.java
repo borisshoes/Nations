@@ -179,7 +179,7 @@ public class NationChunk {
    
    public Triple<Double,Double,Double> getYield(){
       long now = System.currentTimeMillis();
-      if(now - lastYieldUpdate > 3600000){
+      if(now - lastYieldUpdate > Nations.CHUNK_CACHE_LIFETIME * 60000L){
          updateYield(Nations.SERVER.getOverworld());
       }
       return this.yields;
