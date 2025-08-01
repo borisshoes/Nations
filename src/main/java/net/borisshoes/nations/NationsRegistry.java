@@ -194,6 +194,9 @@ public class NationsRegistry {
    public static final NationsConfig.ConfigSetting<?> WORLD_BORDER_RADIUS_NETHER_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("worldBorderRadiusNether", 16, new ConfigUtils.IntegerConfigValue.IntLimits(1,1875000))));
    
+   public static final NationsConfig.ConfigSetting<?> WORLD_BORDER_RADIUS_END_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
+         new ConfigUtils.IntegerConfigValue("worldBorderRadiusEnd", 16, new ConfigUtils.IntegerConfigValue.IntLimits(1,1875000))));
+   
    public static final NationsConfig.ConfigSetting<?> RESEARCH_TIER_CFG = registerConfigSetting(new NationsConfig.NormalConfigSetting<>(
          new ConfigUtils.IntegerConfigValue("researchTier", 0, new ConfigUtils.IntegerConfigValue.IntLimits(0,100))));
    

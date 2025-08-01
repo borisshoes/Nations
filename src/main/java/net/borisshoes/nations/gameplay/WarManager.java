@@ -684,11 +684,6 @@ public class WarManager {
                removedStacks.add(item.copyAndEmpty());
                changed = true;
             }
-            
-            if(EnhancedStatUtils.isEnhanced(item) && item.contains(DataComponentTypes.EQUIPPABLE)){
-               removedStacks.add(item.copyAndEmpty());
-               changed = true;
-            }
          }
          
          if(changed && ArcanaItemUtils.identifyItem(carrier) instanceof ArcanistsBelt belt){

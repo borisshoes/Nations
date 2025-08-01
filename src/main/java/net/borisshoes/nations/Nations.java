@@ -71,6 +71,7 @@ public class Nations implements ModInitializer {
    public static boolean SHUTTING_DOWN = false;
    public static int OVERWORLD_BORDER = 0;
    public static int NETHER_BORDER = 0;
+   public static int END_BORDER = 0;
    public static int CHUNK_CACHE_LIFETIME = 0;
    
    @Override
@@ -78,6 +79,7 @@ public class Nations implements ModInitializer {
       CONFIG = new ConfigUtils(FabricLoader.getInstance().getConfigDir().resolve(CONFIG_NAME).toFile(), LOGGER, NationsRegistry.CONFIG_SETTINGS.stream().map(NationsConfig.ConfigSetting::makeConfigValue).collect(Collectors.toCollection(HashSet::new)));
       OVERWORLD_BORDER = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
       NETHER_BORDER = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_NETHER_CFG);
+      END_BORDER = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_END_CFG);
       CHUNK_CACHE_LIFETIME = NationsConfig.getInt(NationsRegistry.CHUNK_CACHE_LIFETIME_CFG);
       NationsRegistry.initialize();
       
@@ -247,6 +249,8 @@ public class Nations implements ModInitializer {
             border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_OVERWORLD_CFG);
          }else if(world.getRegistryKey().equals(ServerWorld.NETHER)){
             border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_NETHER_CFG);
+         }else if(world.getRegistryKey().equals(ServerWorld.END)){
+            border = NationsConfig.getInt(NationsRegistry.WORLD_BORDER_RADIUS_END_CFG);
          }
          if(border == -1) continue;
          

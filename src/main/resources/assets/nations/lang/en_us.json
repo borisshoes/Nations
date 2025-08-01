@@ -446,6 +446,8 @@
   "command.nations.war_max_blockade_percentage.getter_setter": "Maximum Blockaded Yield Percentage: %s",
   "command.nations.war_minimum_capture_point_difference.comment": "The minimum difference in number of Capture Points between a defending and attacking Nation for an attacker to attack unprovoked.",
   "command.nations.war_minimum_capture_point_difference.getter_setter": "Minimum Capture Point Difference: %s",
+  "command.nations.world_border_radius_end.comment": "Radius in Chunks for the End World Border",
+  "command.nations.world_border_radius_end.getter_setter": "End World Border Radius: %s Chunks",
   "command.nations.world_border_radius_nether.comment": "Radius in Chunks for the Nether World Border",
   "command.nations.world_border_radius_nether.getter_setter": "Nether World Border Radius: %s Chunks",
   "command.nations.world_border_radius_overworld.comment": "Radius in Chunks for the Overworld Border",

@@ -587,6 +587,8 @@ public class NationsLand {
          border = Nations.OVERWORLD_BORDER;
       } else if (world.equals(ServerWorld.NETHER)) {
          border = NETHER_BORDER;
+      } else if (world.equals(ServerWorld.END)) {
+         border = END_BORDER;
       } else {
          return pos;
       }
@@ -608,10 +610,13 @@ public class NationsLand {
    public static boolean isOutOfBounds(RegistryKey<World> world, BlockPos pos){
       int overworldBorder = Nations.OVERWORLD_BORDER;
       int netherBorder = Nations.NETHER_BORDER;
+      int endBorder = END_BORDER;
       if(world.equals(ServerWorld.OVERWORLD)){
          return Math.max(Math.abs(pos.getX()), Math.abs(pos.getZ())) > (overworldBorder * 16);
       }else if(world.equals(ServerWorld.NETHER)){
          return Math.max(Math.abs(pos.getX()), Math.abs(pos.getZ())) > (netherBorder * 16);
+      }else if(world.equals(ServerWorld.END)){
+         return Math.max(Math.abs(pos.getX()), Math.abs(pos.getZ())) > (endBorder * 16);
       }else{
          return false;
       }
